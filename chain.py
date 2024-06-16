@@ -7,7 +7,6 @@ import prims
 from arc_types import *
 
 # for efficient predictions of less trace
-# TODO: use set to store chain pools
 # TODO: implement solver without trace (or generalise to allow trace)
 
 prims_with_return_types = {
