@@ -5,15 +5,14 @@ import uuid
 from arc_types import *
 from prims import *
 from utils import load_json
-from chain import solver_with_trace
 from llm import PrimitiveInstructor
-
-primitive_instructor = PrimitiveInstructor(None)
+from solver import InstructedDSL
 
 base_path = 'arc-prize-2024/'
-max_depth = 3
+max_depth = 4
 
 # data
+train_challenges = load_json(base_path + 'arc-agi_training_challenges.json')
 test_challenges = load_json(base_path + 'arc-agi_test_challenges.json')
 
 # TODO: param bootstraping
@@ -30,29 +29,28 @@ experiment_path = f'exp/{experiment_id}'
 submission = dict()
 # iterate over all tasks
 with tqdm(test_challenges.items(), desc="Evaluating tasks", total=len(test_challenges)) as pbar:
+    primitive_instructor = PrimitiveInstructor(train_data=train_challenges)
     for key, task in pbar:
         train_inputs = [example['input'] for example in task['train']]
         train_outputs = [example['output'] for example in task['train']]
         suggested_prims = primitive_instructor.ask(train_inputs, train_outputs)
         # test_inputs = [example['input'] for example in task['test']]
-        # exit()
-        print(suggested_prims)
-        break
+        # print(suggested_prims)
+        idsl = InstructedDSL(instruction=suggested_prims,
+                             use_instruction=True,
+                             max_depth=3)
+
         hypothesis = []
         for inp, outp in zip(train_inputs, train_outputs):
-            res, result, primitives = solver_with_trace(inp, outp, max_depth)
+            res, result, primitives = idsl.solve(inp, outp)
             if res:
                 hypothesis.append(primitives)
-
-        print(hypothesis)
 
         if len(hypothesis):
             exist_hypothesis += 1  # Increment correct_guess if the result is True
 
         # Update the progress bar with current accuracy
         pbar.set_postfix(exist_chance=f"{exist_hypothesis}/{len(test_challenges)} ({exist_hypothesis/len(test_challenges)*100:.2f}%)")
-
-
 
 with open('submission.json', 'w') as fp:
     json.dump(submission, fp)
