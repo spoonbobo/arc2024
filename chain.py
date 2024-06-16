@@ -2,8 +2,6 @@ from itertools import product
 import prims
 from typing import get_type_hints
 from collections import defaultdict
-from copy import deepcopy
-
 import inspect
 from arc_types import *
 
@@ -25,7 +23,7 @@ def find_common_items(input_pools: dict):
     values_product = product(*input_pools.values())
     return [{key: value for key, value in zip(keys, values)} for values in values_product]
 
-def solver_with_trace(grid, target, max_depth=2):
+def solver_with_trace(grid, target, max_depth=2, beam_width=3):
     chaining_pool = defaultdict(set)  # Use set for chaining pool
     trace_pool = defaultdict(list)  # Dictionary to store traces of primitives and their input parameters
 
@@ -44,11 +42,16 @@ def solver_with_trace(grid, target, max_depth=2):
         new_chains = defaultdict(set)  # Use set for new chains
         new_traces = defaultdict(list)  # New dictionary for updated traces
         for primitive, details in prims_with_return_types.items():
-            input_pools = {param_name: deepcopy(chaining_pool[param_type]) 
+            input_pools = {param_name: chaining_pool[param_type] 
                            for param_name, param_type in details['input_types'].items()}
-            input_traces = {param_name: deepcopy(trace_pool[param_type]) 
+            input_traces = {param_name: trace_pool[param_type] 
                             for param_name, param_type in details['input_types'].items()}
-            for candidate_chain in find_common_items(input_pools):
+            candidate_chains = find_common_items(input_pools)
+            
+            # Apply beam search: keep only the top `beam_width` candidate chains
+            candidate_chains = sorted(candidate_chains, key=lambda x: h(x, target))[:beam_width]
+            
+            for candidate_chain in candidate_chains:
                 result = details['func'](**candidate_chain)
                 if result == target:
                     # Gather the trace leading to the successful result
@@ -71,3 +74,31 @@ def solver_with_trace(grid, target, max_depth=2):
             trace_pool[ret_type].extend(new_traces[ret_type])
 
     return False, None, None
+
+def h(candidate_chain, target_grid):
+    sim = 0.5
+    if 'grid' in candidate_chain:
+        grid = candidate_chain['grid']
+        sim = grid_similarity(grid, target_grid)
+    return sim
+
+def grid_similarity(grid1, grid2):
+    # Calculate the similarity between two grids of varying sizes
+    # Example: Intersection over Union (IoU) or a custom similarity metric
+    if len(grid1) == 0 or len(grid2) == 0:
+        return float('inf')  # Handle empty grids
+
+    # Calculate the dimensions of the grids
+    rows1, cols1 = len(grid1), len(grid1[0])
+    rows2, cols2 = len(grid2), len(grid2[0])
+
+    # Calculate the overlapping area
+    overlap_rows = min(rows1, rows2)
+    overlap_cols = min(cols1, cols2)
+    overlap_area = sum(1 for i in range(overlap_rows) for j in range(overlap_cols) if grid1[i][j] == grid2[i][j])
+
+    # Calculate the total area of both grids
+    total_area = rows1 * cols1 + rows2 * cols2 - overlap_area
+
+    # Return the similarity measure (higher is better, so we return the inverse for the heuristic)
+    return 1 - (overlap_area / total_area)

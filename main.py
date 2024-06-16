@@ -3,6 +3,7 @@ import json
 import uuid
 from tqdm import tqdm
 from multiprocessing import Pool, Manager
+import traceback
 
 from arc_types import *
 from prims import *
@@ -46,6 +47,8 @@ def evaluate_task(args):
             with open(f'{exp_path}/primitives_trace.json', 'w') as f:
                 json.dump(primitives_data, f, indent=4)
             
+            print(f'{[p[0] for p in primitives]}')
+            
             with open(f'{exp_path}/primitives_trace.txt', 'w') as f:
                 for p in primitives:
                     f.write(f"{p[0]}\n")
@@ -65,7 +68,8 @@ def evaluate_task(args):
         
         return res
     except Exception as e:
-        print(f"Error processing task {args[0]}: {e}")
+        traceback.print_exc()
+        # exit()
         return False
 
 if __name__ == '__main__':
