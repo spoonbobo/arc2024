@@ -1,8 +1,9 @@
 from itertools import product
-import prims
 from typing import get_type_hints
 from collections import defaultdict
 import inspect
+
+import prims
 from arc_types import *
 
 # for efficient predictions of less trace
@@ -23,7 +24,7 @@ def find_common_items(input_pools: dict):
     values_product = product(*input_pools.values())
     return [{key: value for key, value in zip(keys, values)} for values in values_product]
 
-def solver_with_trace(grid, target, max_depth=2, beam_width=3):
+def solver_with_trace(grid, target, use_beam=True, max_depth=2, beam_width=3):
     chaining_pool = defaultdict(set)  # Use set for chaining pool
     trace_pool = defaultdict(list)  # Dictionary to store traces of primitives and their input parameters
 
@@ -39,7 +40,6 @@ def solver_with_trace(grid, target, max_depth=2, beam_width=3):
 
     # Chain combinations of previous results for deeper levels
     for depth in range(2, max_depth + 1):
-        new_chains = defaultdict(set)  # Use set for new chains
         new_traces = defaultdict(list)  # New dictionary for updated traces
         for primitive, details in prims_with_return_types.items():
             input_pools = {param_name: chaining_pool[param_type] 
@@ -49,7 +49,8 @@ def solver_with_trace(grid, target, max_depth=2, beam_width=3):
             candidate_chains = find_common_items(input_pools)
             
             # Apply beam search: keep only the top `beam_width` candidate chains
-            candidate_chains = sorted(candidate_chains, key=lambda x: h(x, target))[:beam_width]
+            if use_beam:
+                candidate_chains = sorted(candidate_chains, key=lambda x: h(x, target))[:beam_width]
             
             for candidate_chain in candidate_chains:
                 result = details['func'](**candidate_chain)
@@ -60,18 +61,18 @@ def solver_with_trace(grid, target, max_depth=2, beam_width=3):
                         trace.extend(input_traces[param_name][list(input_pools[param_name]).index(candidate_chain[param_name])])
                     trace.append((primitive, {param_name: {"value": candidate_chain[param_name], "from": input_traces[param_name][list(input_pools[param_name]).index(candidate_chain[param_name])][-1][0]} for param_name in details['input_types']}))  # Append the current primitive and its args
                     return True, result, trace  # Return the successful trace
-                new_chains[details['return_type']].add(result)
                 # Update the trace with the current primitive and its args
                 current_trace = []
                 for param_name in details['input_types'].keys():
                     current_trace.extend(input_traces[param_name][list(input_pools[param_name]).index(candidate_chain[param_name])])
                 current_trace.append((primitive, {param_name: {"value": candidate_chain[param_name], "from": input_traces[param_name][list(input_pools[param_name]).index(candidate_chain[param_name])][-1][0]} for param_name in details['input_types']}))
-                new_traces[details['return_type']].append(current_trace)
+                new_traces[details['return_type']].append((result, current_trace))  # Append the result and the current trace
 
-        # Update chaining pool and trace pool with new chains and traces
-        for ret_type, chains in new_chains.items():
-            chaining_pool[ret_type].update(chains)
-            trace_pool[ret_type].extend(new_traces[ret_type])
+        # Update chaining pool and trace pool with new traces
+        for ret_type, traces in new_traces.items():
+            for result, trace in traces:
+                chaining_pool[ret_type].add(result)
+                trace_pool[ret_type].append(trace)
 
     return False, None, None
 

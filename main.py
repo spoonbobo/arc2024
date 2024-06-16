@@ -14,6 +14,7 @@ from chain import solver_with_trace
 
 base_path = 'arc-prize-2024/'
 max_depth = 3
+use_beam = False
 
 # data
 train_challenges = load_json(base_path + 'arc-agi_training_challenges.json')
@@ -22,8 +23,6 @@ train_solutions = load_json(base_path + 'arc-agi_training_solutions.json')
 # TODO: param bootstraping
 # TODO: hypothesis in training phases
 # TODO: improve efficiency at scaling up
-
-# Generate a unique ID for the entire experiment
 
 def evaluate_task(args):
     try:
@@ -34,7 +33,10 @@ def evaluate_task(args):
         test_output = train_solutions[key][0]
         # convert test_output to tuple of tuples
         test_output = tuple(tuple(row) for row in test_output)
-        res, result, primitives = solver_with_trace(test_input, test_output, max_depth)
+        res, result, primitives = solver_with_trace(test_input, 
+                                                    test_output, 
+                                                    use_beam=use_beam, 
+                                                    max_depth=max_depth)
 
         # Determine result folder based on success or failure
         result_folder = "success" if res else "failed"

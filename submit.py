@@ -1,12 +1,14 @@
-import os
 import json
 from tqdm import tqdm
 import uuid
 
 from arc_types import *
 from prims import *
-from utils import load_json, plot_grids, save_image
-from chain import solver, solver_with_trace
+from utils import load_json
+from chain import solver_with_trace
+from llm import PrimitiveInstructor
+
+primitive_instructor = PrimitiveInstructor(None)
 
 base_path = 'arc-prize-2024/'
 max_depth = 3
@@ -31,9 +33,11 @@ with tqdm(test_challenges.items(), desc="Evaluating tasks", total=len(test_chall
     for key, task in pbar:
         train_inputs = [example['input'] for example in task['train']]
         train_outputs = [example['output'] for example in task['train']]
-        test_inputs = [example['input'] for example in task['test']]
+        suggested_prims = primitive_instructor.ask(train_inputs, train_outputs)
+        # test_inputs = [example['input'] for example in task['test']]
         # exit()
-        continue
+        print(suggested_prims)
+        break
         hypothesis = []
         for inp, outp in zip(train_inputs, train_outputs):
             res, result, primitives = solver_with_trace(inp, outp, max_depth)
