@@ -14,9 +14,9 @@ from llm import PrimitiveInstructor
 # for development, enable solver with trace to see primitives and visualize results
 
 base_path = 'arc-prize-2024/'
-max_depth = 10
+max_depth = 4
 use_beam = True
-beam_width = 3
+beam_width = 2
 
 # data
 train_challenges = load_json(base_path + 'arc-agi_training_challenges.json')
@@ -34,10 +34,10 @@ def evaluate_task(args):
         test_output = train_solutions[key][0]
         # convert test_output to tuple of tuples
         test_output = tuple(tuple(row) for row in test_output)
-        primitive_instructor = PrimitiveInstructor(None)
-        idsl = InstructedDSL(max_depth=3, use_beam=use_beam, beam_width=beam_width)
-        res, result, primitives = idsl.solve(test_input, 
-                                             test_output)
+        # primitive_instructor = PrimitiveInstructor(None)
+        idsl = InstructedDSL(max_depth=max_depth, use_beam=use_beam, beam_width=beam_width)
+        res, result, trace = idsl.solve(test_input, 
+                                        test_output)
 
         # Determine result folder based on success or failure
         result_folder = "success" if res else "failed"
@@ -46,14 +46,14 @@ def evaluate_task(args):
         
         if res:
             # Save primitives as JSON
-            primitives_data = {p[0]: p[1] for p in primitives}
+            primitives_data = {p[0]: p[1] for p in trace}
             with open(f'{exp_path}/primitives_trace.json', 'w') as f:
                 json.dump(primitives_data, f, indent=4)
             
-            print(key, f'{[p[0] for p in primitives]}')
+            print(key, f'{[p[0] for p in trace]}')
             
             with open(f'{exp_path}/primitives_trace.txt', 'w') as f:
-                for p in primitives:
+                for p in trace:
                     f.write(f"{p[0]}\n")
 
         # Save predictions

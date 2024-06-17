@@ -28,28 +28,24 @@ class PrimitiveInstructor:
     
     PRIMITIVE_REQUEST: str = """ 
     Now suggest no more than 10 primitives in python functions as the basis for your reasoning of the symmetrical pattern.
-    Your suggested primitives could be from examples or from your own defined primitives.
+    
+    Important: your primitives must have input params and return types annotated, otherwise the system will break
+    
+    Cautious: the variables you used in primitives must be either assigned, parameters, or other compatible suggested primitives. Accessing undefined variables will break the system.
+    
+    
+    Invalid example:
+    def count_cells(grid):
+        return sum(sum(row) for row in grid)
         
-    The types of parameters and return types of your suggested primitives are from set of type alias [Boolean, Integer, IntegerList, Numerical, IntegerSet, Grid, Cell, Object, Objects, Indices, IndicesSet, Patch, Element, Piece, ListList, ContainerContainer, Container, Any], and they are defined as:
+    valid example:
+    def count_cells(grid: Tuple[Tuple[int]]): -> int
+        return sum(sum(row) for row in grid)
+        
+    Do not return None/
+
     
-    Boolean = bool
-    Integer = int
-    IntegerList = Tuple[Integer, ...]
-    Numerical = Union[Integer, IntegerList]
-    IntegerSet = FrozenSet[Integer]
-    Grid = Tuple[Tuple[Integer, ...], ...]
-    Cell = Tuple[Union[Integer, IntegerList], ...]
-    Object = FrozenSet[Cell]
-    Objects = FrozenSet[Object]
-    Indices = FrozenSet[IntegerList]
-    IndicesSet = FrozenSet[Indices]
-    Patch = Union[Object, Indices]
-    Element = Union[Object, Grid]
-    Piece = Union[Grid, Patch]
-    ListList = Tuple[Tuple[Any, ...], ...]
-    ContainerContainer = Container[Container]\
-    
-    Trim your response to include only primitives and their code implementations, and nothing else.
+    Trim your response to include only annotatedprimitives, their code implementations, and nothing else.
     """
 
     def __init__(self, llm=None, train_data=None):
@@ -125,15 +121,11 @@ class PrimitiveInstructor:
             'content': """
             Here are my suggested primitives based on my reasoning of patterns of these grid pairs
             ```python
-            # the input type and return type are in provided set of alias (Grid)
-            # training inputs always boil down to smaller sized output, meaning detailed colors are not needed.
-            def blur(grid: Grid) -> Grid:
-                # Applies a simple blur effect to the grid
+            def blur(grid: Tuple[Tuple[int]]) -> Tuple[Tuple[int]]:
                 def get_neighbors(i, j):
                     neighbors = [(i-1, j-1), (i-1, j), (i-1, j+1), (i, j-1), (i, j), (i, j+1), (i+1, j-1), (i+1, j), (i+1, j+1)]
                     return [(x, y) for x, y in neighbors if 0 <= x < len(grid) and 0 <= y < len(grid[0])]
             
-                # made use of grid in computation, however I ensured what I output is a tuple/ tuple of tuples for easier parsing
                 new_grid = [[0] * len(row) for row in grid]
                 for i in range(len(grid)):
                     for j in range(len(grid[0])):
@@ -142,22 +134,13 @@ class PrimitiveInstructor:
                     new_grid[i][j] = sum(neighbor_values) // len(neighbor_values)
                 return tuple([tuple(row) for row in new_grid])
             
-            # the input type and return type are in provided set of alias (Grid)
-            # there are some colors overlapping in input grid, which could represent some boolean operations can be done there
-            def boolean_or(grid1: Grid, grid2: Grid) -> Grid:
-                # Performs element-wise OR operation between two grids.
+            def boolean_or(grid1: Tuple[Tuple[int]], grid2: Tuple[Tuple[int]]) -> Tuple[Tuple[int]]:
                 return tuple([tuple(cell1 or cell2 for cell1, cell2 in zip(row1, row2)) for row1, row2 in zip(grid1, grid2)])
             
-            # note that I followed provided set of alias and my return type is Integer
-            # this primitive is a creative choice as I would want some heuristics to output an integer that possibly can help solve problem
-            def count_nonzero(grid: Grid) -> Integer:
-                # Counts the number of non-zero values in the grid.
+            def count_nonzero(grid: Tuple[Tuple[int]]) -> Integer:
                 return sum(1 for row in grid for cell in row if cell != 0)
 
-            # the input type and return type are in provided set of alias (Grid, Integer)
-            # it's very reasonable choice because all input grids boil down to smaller sized output, scaling down is obvious
-            def scale_down(grid: Grid, factor: Integer) -> Grid:
-                # Scales down the grid by a given factor
+            def scale_down(grid: Tuple[Tuple[int]], factor: Integer) -> Tuple[Tuple[int]]:
                 if factor <= 0:
                     return grid
                 return tuple([tuple(row[::factor]) for row in grid[::factor]])
@@ -168,10 +151,10 @@ class PrimitiveInstructor:
             'role': 'user',
             'content': "great job!" + prompt,
         },
-        ], options={'temperature': 0.5, 'top_k': 10})
+        ], options={'temperature': 0.1, 'top_k': 10})
         
         resp = response['message']['content']
-        # print(resp)
+        print(resp)
         return self.parse_prims(resp)
 
 if __name__ == '__main__':

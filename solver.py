@@ -149,7 +149,9 @@ class InstructedDSL:
 
         # Initialize chaining pool with depth=1 results
         for primitive, details in self.primitives.items():
-            if not details['input_types'] or (len(details['input_types']) == 1 and Grid in details['input_types'].values()):
+            print('----primitive----', primitive, details['input_types'], Tuple[Tuple[int]] in details['input_types'].values(), Tuple[Tuple[int]] in [Grid])
+            if not details['input_types'] or \
+            (len(details['input_types']) == 1 and (Grid in details['input_types'].values() or Tuple[Tuple[int]] in details['input_types'].values())):
                 args = {param_name: grid for param_name in details['input_types']}
                 result = details['func'](**args)
                 if result == target:
@@ -175,6 +177,7 @@ class InstructedDSL:
                     result = details['func'](**candidate_chain)
                     if result == target:
                         # Gather the trace leading to the successful result
+                        print('result', result, 'target', target)
                         trace = []
                         for param_name, param_type in details['input_types'].items():
                             trace.extend(input_traces[param_name][list(input_pools[param_name]).index(candidate_chain[param_name])])

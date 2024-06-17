@@ -251,6 +251,35 @@ def replace_value(grid: Grid, old_value: Integer, new_value: Integer) -> Grid:
     """Replaces all instances of old_value with new_value in the grid"""
     return tuple([tuple(new_value if cell == old_value else cell for cell in row) for row in grid])
 
+
+def flood_fill(grid: Grid, start_row: Integer, start_col: Integer, new_color: Integer) -> Grid:
+    rows, cols = len(grid), len(grid[0])
+    color_to_replace = grid[start_row][start_col]
+    if color_to_replace == new_color:
+        return grid
+    q = deque([(start_row, start_col)])
+    new_grid = [list(row) for row in grid]
+    while q:
+        x, y = q.popleft()
+        if new_grid[x][y] == color_to_replace:
+            new_grid[x][y] = new_color
+            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < rows and 0 <= ny < cols:
+                    q.append((nx, ny))
+    return tuple(tuple(row) for row in new_grid)
+
+def normalize_grid(grid: Grid, new_min: Integer, new_max: Integer) -> Grid:
+    """ Normalizes the grid values to a new range [new_min, new_max]. """
+    old_min = min(min(row) for row in grid)
+    old_max = max(max(row) for row in grid)
+    range_old = old_max - old_min
+    if range_old == 0:
+        # If all values are the same, return the grid filled with new_min
+        return tuple([tuple(new_min for _ in row) for row in grid])
+    range_new = new_max - new_min
+    return tuple([tuple(int((cell - old_min) / range_old * range_new + new_min) for cell in row) for row in grid])
+
 # border manipulations
 def add_border(grid: Grid, border_value: Integer) -> Grid:
     """ adds a border around the grid """
@@ -273,6 +302,18 @@ def boolean_and(grid1: Grid, grid2: Grid) -> Grid:
 def boolean_or(grid1: Grid, grid2: Grid) -> Grid:
     """Performs element-wise OR operation between two grids."""
     return tuple([tuple(cell1 or cell2 for cell1, cell2 in zip(row1, row2)) for row1, row2 in zip(grid1, grid2)])
+
+def is_even(value: Integer) -> Boolean:
+    """
+    This primitive checks if a given value is even
+    """
+    return value % 2 == 0
+
+def is_symmetric(grid: Grid) -> Boolean:
+    """
+    This primitive checks if a given grid is symmetric
+    """
+    return grid == [i[::-1] for i in grid]
 
 # heuristics
 def grid_mean(grid: Grid) -> Integer:
@@ -312,3 +353,15 @@ def count_nonzero(grid: Grid) -> Integer:
 def count_value(grid: Grid, value: Integer) -> Integer:
     """Counts the number of occurrences of a specific value in the grid."""
     return sum(row.count(value) for row in grid)
+
+def get_value(grid: Grid, row: Integer, col: Integer) -> Integer:
+    """Get the value at a specific cell in the grid."""
+    if 0 <= row < len(grid) and 0 <= col < len(grid[0]):
+        return grid[row][col]
+    else:
+        return 0
+
+# numbers
+def flatten_grid(grid: Grid) -> IntegerList:
+    """ Flattens the grid to a single list. """
+    return tuple([cell for row in grid for cell in row])
