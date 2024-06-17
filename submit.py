@@ -41,7 +41,7 @@ with tqdm(test_challenges.items(), desc="Evaluating tasks", total=len(test_chall
         try:
             idsl = InstructedDSL(instruction=suggested_prims,
                                 use_instruction=True,
-                                max_depth=7)
+                                max_depth=2)
 
             hypothesis = []
             for inp, outp in zip(train_inputs, train_outputs):

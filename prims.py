@@ -1,6 +1,8 @@
-from arc_types import *
-from collections import Counter
+from collections import Counter, deque
+
 import numpy as np
+
+from arc_types import *
 
 # rotation
 def rot45(grid: Grid, fill_value: Integer) -> Grid:
@@ -223,20 +225,6 @@ def erode(grid: Grid) -> Grid:
     return tuple([tuple(row) for row in new_grid])
 
 # magic number
-def is_prime(n: Integer) -> Boolean:
-    """Checks if a number is prime."""
-    if n <= 1:
-        return False
-    if n <= 3:
-        return True
-    if n % 2 == 0 or n % 3 == 0:
-        return False
-    i = 5
-    while i * i <= n:
-        if n % i == 0 or n % (i + 2) == 0:
-            return False
-        i += 6
-    return True
 
 # coloring
 def invert_colors(grid: Grid) -> Grid:
@@ -254,11 +242,18 @@ def replace_value(grid: Grid, old_value: Integer, new_value: Integer) -> Grid:
 
 def flood_fill(grid: Grid, start_row: Integer, start_col: Integer, new_color: Integer) -> Grid:
     rows, cols = len(grid), len(grid[0])
+    
+    # Check if the starting coordinates are within the grid's bounds
+    if not (0 <= start_row < rows and 0 <= start_col < cols):
+        return grid
+    
     color_to_replace = grid[start_row][start_col]
     if color_to_replace == new_color:
         return grid
+    
     q = deque([(start_row, start_col)])
     new_grid = [list(row) for row in grid]
+    
     while q:
         x, y = q.popleft()
         if new_grid[x][y] == color_to_replace:
@@ -267,6 +262,7 @@ def flood_fill(grid: Grid, start_row: Integer, start_col: Integer, new_color: In
                 nx, ny = x + dx, y + dy
                 if 0 <= nx < rows and 0 <= ny < cols:
                     q.append((nx, ny))
+    
     return tuple(tuple(row) for row in new_grid)
 
 def normalize_grid(grid: Grid, new_min: Integer, new_max: Integer) -> Grid:
@@ -303,17 +299,13 @@ def boolean_or(grid1: Grid, grid2: Grid) -> Grid:
     """Performs element-wise OR operation between two grids."""
     return tuple([tuple(cell1 or cell2 for cell1, cell2 in zip(row1, row2)) for row1, row2 in zip(grid1, grid2)])
 
-def is_even(value: Integer) -> Boolean:
-    """
-    This primitive checks if a given value is even
-    """
-    return value % 2 == 0
+def is_square_grid(grid: Grid) -> Boolean:
+    """Checks if the grid is square."""
+    return len(grid) == len(grid[0]) if grid else False
 
-def is_symmetric(grid: Grid) -> Boolean:
-    """
-    This primitive checks if a given grid is symmetric
-    """
-    return grid == [i[::-1] for i in grid]
+def contains_value(grid: Grid, value: Integer) -> Boolean:
+    """Checks if the grid contains a specific value."""
+    return any(value in row for row in grid)
 
 # heuristics
 def grid_mean(grid: Grid) -> Integer:
@@ -346,6 +338,10 @@ def grid_min(grid: Grid) -> Integer:
         return 0
     return min(flat_list)
 
+def grid_sum(grid: Grid) -> Integer:
+    """Calculates the sum of all values in the grid."""
+    return sum(sum(row) for row in grid)
+
 def count_nonzero(grid: Grid) -> Integer:
     """Counts the number of non-zero values in the grid."""
     return sum(1 for row in grid for cell in row if cell != 0)
@@ -361,7 +357,25 @@ def get_value(grid: Grid, row: Integer, col: Integer) -> Integer:
     else:
         return 0
 
+def column_sums(grid: Grid) -> IntegerList:
+    """Calculates the sum of each column in the grid."""
+    return tuple(sum(row[i] for row in grid) for i in range(len(grid[0])))
+
+# rows
+def sort_integer_list(int_list: IntegerList) -> IntegerList:
+    """Sorts the list of integers in ascending order."""
+    return tuple(sorted(int_list))
+
 # numbers
-def flatten_grid(grid: Grid) -> IntegerList:
-    """ Flattens the grid to a single list. """
-    return tuple([cell for row in grid for cell in row])
+def sum_integer_list(int_list: IntegerList) -> Integer:
+    """Calculates the sum of all integers in the list."""
+    return sum(int_list)
+
+def min_integer_list(int_list: IntegerList) -> Integer:
+    """Finds the minimum value in the list."""
+    return min(int_list) if int_list else 0
+
+def max_integer_list(int_list: IntegerList) -> Integer:
+    """Finds the maximum value in the list."""
+    return max(int_list) if int_list else 0
+

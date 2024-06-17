@@ -38,12 +38,11 @@ class PrimitiveInstructor:
     def count_cells(grid):
         return sum(sum(row) for row in grid)
         
+    This is invalid because the function does not have return type and param annotations!
+        
     valid example:
     def count_cells(grid: Tuple[Tuple[int]]): -> int
         return sum(sum(row) for row in grid)
-        
-    Do not return None/
-
     
     Trim your response to include only annotatedprimitives, their code implementations, and nothing else.
     """

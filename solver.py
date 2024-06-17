@@ -1,5 +1,5 @@
 from itertools import product
-from typing import Any, get_origin, get_args, List, Tuple, Set, FrozenSet, Union, get_type_hints, Dict
+from typing import Any, List, Tuple, Set, get_type_hints, Dict
 from collections import defaultdict
 import inspect
 import types
@@ -8,72 +8,7 @@ import ast
 import prims
 import arc_types
 from arc_types import *
-
-def typeguard(inp: Any, return_type: type):
-    origin = get_origin(return_type)
-    args = get_args(return_type)
-    
-    if origin is list:
-        if isinstance(inp, list):
-            inner_type = args[0]
-            return tuple(typeguard(i, inner_type) for i in inp)
-    elif origin is tuple:
-        if isinstance(inp, (list, tuple)):
-            return tuple(typeguard(i, args[0]) for i in inp)
-    elif origin is set:
-        if isinstance(inp, set):
-            inner_type = args[0]
-            return frozenset(typeguard(i, inner_type) for i in inp)
-    elif origin is frozenset:
-        if isinstance(inp, set):
-            inner_type = args[0]
-            return frozenset(typeguard(i, inner_type) for i in inp)
-    elif origin is Union:
-        for arg in args:
-            try:
-                return typeguard(inp, arg)
-            except:
-                continue
-    elif return_type == Grid:
-        if isinstance(inp, (list, tuple)):
-            return tuple(tuple(i) if isinstance(i, list) else i for i in inp)
-    elif return_type == IntegerList:
-        if isinstance(inp, (list, tuple)):
-            return tuple(inp)
-    elif return_type == IntegerSet:
-        if isinstance(inp, set):
-            return frozenset(inp)
-    elif return_type == Cell:
-        if isinstance(inp, (list, tuple)):
-            return tuple(inp)
-    elif return_type == Object:
-        if isinstance(inp, set):
-            return frozenset(inp)
-    elif return_type == Objects:
-        if isinstance(inp, set):
-            return frozenset(inp)
-    elif return_type == Indices:
-        if isinstance(inp, set):
-            return frozenset(inp)
-    elif return_type == IndicesSet:
-        if isinstance(inp, set):
-            return frozenset(inp)
-    elif return_type == Patch:
-        if isinstance(inp, (set, list, tuple)):
-            return frozenset(inp) if isinstance(inp, set) else tuple(inp)
-    elif return_type == Element:
-        if isinstance(inp, (set, list, tuple)):
-            return frozenset(inp) if isinstance(inp, set) else tuple(inp)
-    elif return_type == Piece:
-        if isinstance(inp, (set, list, tuple)):
-            return frozenset(inp) if isinstance(inp, set) else tuple(inp)
-    elif return_type == ListList:
-        if isinstance(inp, (list, tuple)):
-            return tuple(tuple(i) if isinstance(i, list) else i for i in inp)
-    elif return_type == ContainerContainer:
-        if isinstance(inp, Container):
-            return inp
-    return inp
+# from typeguard import typeguard
 
 class InstructedDSL:
     
@@ -149,15 +84,15 @@ class InstructedDSL:
 
         # Initialize chaining pool with depth=1 results
         for primitive, details in self.primitives.items():
-            print('----primitive----', primitive, details['input_types'], Tuple[Tuple[int]] in details['input_types'].values(), Tuple[Tuple[int]] in [Grid])
             if not details['input_types'] or \
-            (len(details['input_types']) == 1 and (Grid in details['input_types'].values() or Tuple[Tuple[int]] in details['input_types'].values())):
+                (len(details['input_types']) == 1 and Grid in details['input_types'].values()) or \
+                    (len(details['input_types']) == 1 and Tuple[Tuple[int]] in details['input_types'].values()):
                 args = {param_name: grid for param_name in details['input_types']}
                 result = details['func'](**args)
                 if result == target:
                     return True, result, [(primitive, args)]  # Return the primitive and its args as part of the trace
                 chaining_pool[details['return_type']].add(result)
-                trace_pool[details['return_type']].append([(primitive, {param_name: {"value": grid, "from": None} for param_name in details['input_types']})])  # Store initial trace with args
+                trace_pool[details['return_type']].append([(primitive, {param_name: {"from": None} for param_name in details['input_types']})])  # Store initial trace with args
 
         # Chain combinations of previous results for deeper levels
         for depth in range(2, self.max_depth + 1):
@@ -177,17 +112,16 @@ class InstructedDSL:
                     result = details['func'](**candidate_chain)
                     if result == target:
                         # Gather the trace leading to the successful result
-                        print('result', result, 'target', target)
                         trace = []
                         for param_name, param_type in details['input_types'].items():
                             trace.extend(input_traces[param_name][list(input_pools[param_name]).index(candidate_chain[param_name])])
-                        trace.append((primitive, {param_name: {"value": candidate_chain[param_name], "from": input_traces[param_name][list(input_pools[param_name]).index(candidate_chain[param_name])][-1][0]} for param_name in details['input_types']}))  # Append the current primitive and its args
+                        trace.append((primitive, {param_name: {"from": input_traces[param_name][list(input_pools[param_name]).index(candidate_chain[param_name])][-1][0]} for param_name in details['input_types']}))  # Append the current primitive and its args
                         return True, result, trace  # Return the successful trace
                     # Update the trace with the current primitive and its args
                     current_trace = []
                     for param_name in details['input_types'].keys():
                         current_trace.extend(input_traces[param_name][list(input_pools[param_name]).index(candidate_chain[param_name])])
-                    current_trace.append((primitive, {param_name: {"value": candidate_chain[param_name], "from": input_traces[param_name][list(input_pools[param_name]).index(candidate_chain[param_name])][-1][0]} for param_name in details['input_types']}))
+                    current_trace.append((primitive, {param_name: {"from": input_traces[param_name][list(input_pools[param_name]).index(candidate_chain[param_name])][-1][0]} for param_name in details['input_types']}))
                     new_traces[details['return_type']].append((result, current_trace))  # Append the result and the current trace
 
             # Update chaining pool and trace pool with new traces

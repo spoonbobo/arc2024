@@ -9,12 +9,12 @@ from arc_types import *
 from prims import *
 from utils import load_json, plot_grids, save_image
 from solver import InstructedDSL
-from llm import PrimitiveInstructor
+# from llm import PrimitiveInstructor
 
 # for development, enable solver with trace to see primitives and visualize results
 
 base_path = 'arc-prize-2024/'
-max_depth = 4
+max_depth = 3
 use_beam = True
 beam_width = 2
 
