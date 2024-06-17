@@ -1,5 +1,5 @@
-from itertools import product
-from typing import Any, List, Tuple, Set, get_type_hints, Dict
+from itertools import product, islice
+from typing import Any, List, Tuple, Set, get_type_hints, Dict, Callable
 from collections import defaultdict
 import inspect
 import types
@@ -8,10 +8,8 @@ import ast
 import prims
 import arc_types
 from arc_types import *
-# from typeguard import typeguard
 
 class InstructedDSL:
-    
     """
     This class is used to create a DSL for solving puzzles using primitives under LLM instructions
     """
@@ -29,11 +27,11 @@ class InstructedDSL:
         self.use_instruction = use_instruction
 
         self.primitives: Dict[str, Dict[str, Callable | type | Dict[str, type]]] = {}
+        self.memo = {}  # Initialize the memo attribute
         if use_instruction:
             self.load_prims(instruction)
         else:
             self.load_prims(prims)
-        # print(self.primitives.keys())
     
     def load_prims(self, primitives: types.ModuleType | List[str]) -> None:
         if isinstance(primitives, types.ModuleType):
@@ -45,13 +43,8 @@ class InstructedDSL:
                 }
                 for name, func in inspect.getmembers(prims, inspect.isfunction)
             }
-        
         else:
-            func_env = {}
-
-            for name, obj in inspect.getmembers(arc_types):
-                if not inspect.isbuiltin(obj):
-                    func_env[name] = obj
+            func_env = {name: obj for name, obj in inspect.getmembers(arc_types) if not inspect.isbuiltin(obj)}
 
             for prim in primitives:
                 module = ast.parse(prim)
@@ -69,15 +62,31 @@ class InstructedDSL:
                                 'return_type': return_type,
                                 'input_types': type_hints
                             }
-                            print(self.primitives[func_name])
                         except Exception as e:
                             print(f"Failed to parse function {func_name}: {e} ({prim})")
 
     def generate_chains(self, input_pools: Dict[str, Set[Any]]):
         keys = input_pools.keys()
-        values_product = product(*input_pools.values())
-        return [{key: value for key, value in zip(keys, values)} for values in values_product]
-    
+        for values in product(*input_pools.values()):
+            yield {key: value for key, value in zip(keys, values)}
+
+    def make_hashable(self, obj):
+        if isinstance(obj, list):
+            return tuple(self.make_hashable(e) for e in obj)
+        elif isinstance(obj, dict):
+            return frozenset((k, self.make_hashable(v)) for k, v in obj.items())
+        elif isinstance(obj, set):
+            return frozenset(self.make_hashable(e) for e in obj)
+        return obj
+
+    def memoized_func(self, func, **kwargs):
+        # Convert all values in kwargs to a hashable type
+        hashable_kwargs = {k: self.make_hashable(v) for k, v in kwargs.items()}
+        key = (func.__name__, frozenset(hashable_kwargs.items()))
+        if key not in self.memo:
+            self.memo[key] = func(**kwargs)
+        return self.memo[key]
+
     def solve(self, grid, target):
         chaining_pool = defaultdict(set)
         trace_pool = defaultdict(list)
@@ -88,7 +97,7 @@ class InstructedDSL:
                 (len(details['input_types']) == 1 and Grid in details['input_types'].values()) or \
                     (len(details['input_types']) == 1 and Tuple[Tuple[int]] in details['input_types'].values()):
                 args = {param_name: grid for param_name in details['input_types']}
-                result = details['func'](**args)
+                result = self.memoized_func(details['func'], **args)
                 if result == target:
                     return True, result, [(primitive, args)]
                 chaining_pool[details['return_type']].add(result)
@@ -103,23 +112,13 @@ class InstructedDSL:
                 
                 if self.use_beam:
                     candidate_chains = sorted(candidate_chains, key=lambda x: self.h(x, target))[:self.beam_width]
-                
+
                 for candidate_chain in candidate_chains:
-                    result = details['func'](**candidate_chain)
+                    result = self.memoized_func(details['func'], **candidate_chain)
                     if result == target:
-                        trace = []
-                        for param_name, param_type in details['input_types'].items():
-                            param_value = candidate_chain[param_name]
-                            param_index = {v: i for i, v in enumerate(input_pools[param_name])}[param_value]
-                            trace.extend(input_traces[param_name][param_index])
-                        trace.append((primitive, {param_name: {"from": input_traces[param_name][param_index][-1][0]} for param_name in details['input_types']}))
+                        trace = self.build_trace(candidate_chain, details, input_pools, input_traces)
                         return True, result, trace
-                    current_trace = []
-                    for param_name in details['input_types'].keys():
-                        param_value = candidate_chain[param_name]
-                        param_index = {v: i for i, v in enumerate(input_pools[param_name])}[param_value]
-                        current_trace.extend(input_traces[param_name][param_index])
-                    current_trace.append((primitive, {param_name: {"from": input_traces[param_name][param_index][-1][0]} for param_name in details['input_types']}))
+                    current_trace = self.build_trace(candidate_chain, details, input_pools, input_traces)
                     new_traces[details['return_type']].append((result, current_trace))
 
             for ret_type, traces in new_traces.items():
@@ -129,35 +128,42 @@ class InstructedDSL:
 
         return False, None, None
 
+    def generate_chains(self, input_pools: Dict[str, Set[Any]]):
+        keys = input_pools.keys()
+        for values in product(*input_pools.values()):
+            yield {key: value for key, value in zip(keys, values)}
+
+    def build_trace(self, candidate_chain, details, input_pools, input_traces):
+        trace = []
+        param_indices = {param_name: {v: i for i, v in enumerate(input_pools[param_name])} for param_name in details['input_types']}
+        for param_name, param_type in details['input_types'].items():
+            param_value = candidate_chain[param_name]
+            param_index = param_indices[param_name][param_value]
+            trace.extend(input_traces[param_name][param_index])
+        trace.append((details['func'].__name__, {param_name: {"from": input_traces[param_name][param_index][-1][0]} for param_name in details['input_types']}))
+        return trace
 
     def h(self, candidate_chain, target_grid):
         sim = 0.5
         if 'grid' in candidate_chain:
             grid = candidate_chain['grid']
-            sim = grid_similarity(grid, target_grid)
+            return grid_similarity(grid, target_grid)
         return sim
 
 def grid_similarity(grid1, grid2):
-    # Calculate the similarity between two grids of varying sizes
-    # Example: Intersection over Union (IoU) or a custom similarity metric
-    if len(grid1) == 0 or len(grid2) == 0:
+    if not grid1 or not grid2:
         return float('inf')  # Handle empty grids
 
-    # Calculate the dimensions of the grids
     rows1, cols1 = len(grid1), len(grid1[0])
     rows2, cols2 = len(grid2), len(grid2[0])
 
-    # Calculate the overlapping area
     overlap_rows = min(rows1, rows2)
     overlap_cols = min(cols1, cols2)
     overlap_area = sum(1 for i in range(overlap_rows) for j in range(overlap_cols) if grid1[i][j] == grid2[i][j])
 
-    # Calculate the total area of both grids
     total_area = rows1 * cols1 + rows2 * cols2 - overlap_area
 
-    # Return the similarity measure (higher is better, so we return the inverse for the heuristic)
     return 1 - (overlap_area / total_area)
-
 
 if __name__ == '__main__':
     idsl = InstructedDSL()
