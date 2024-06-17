@@ -16,7 +16,7 @@ from solver import InstructedDSL
 base_path = 'arc-prize-2024/'
 max_depth = 3
 use_beam = True
-beam_width = 2
+beam_width = 5
 
 # data
 train_challenges = load_json(base_path + 'arc-agi_training_challenges.json')
@@ -85,8 +85,13 @@ if __name__ == '__main__':
         experiment_path = f'exp/{experiment_id}'
         os.makedirs(experiment_path, exist_ok=True)
         
-        with Pool(processes=16) as pool:
+        with Pool() as pool:
             results = list(tqdm(pool.imap(evaluate_task, [(key, task, train_solutions, experiment_path) for key, task in train_challenges.items()]), total=total_tasks, desc="Evaluating tasks"))
         
+        # for key, task in tqdm(train_challenges.items(), total=total_tasks, desc="Evaluating tasks"):
+        #     result = evaluate_task((key, task, train_solutions, experiment_path))
+        #     results.append(result)
+        #     # exit()
+    
         correct_guess = sum(results)
         print(f'\nMade correct guesses for {correct_guess} out of {total_tasks} tasks')

@@ -1,6 +1,7 @@
-from itertools import product, islice
+from itertools import product
 from typing import Any, List, Tuple, Set, get_type_hints, Dict, Callable
 from collections import defaultdict
+from functools import lru_cache
 import inspect
 import types
 import ast
@@ -28,7 +29,6 @@ class InstructedDSL:
 
         self.primitives: Dict[str, Dict[str, Callable | type | Dict[str, type]]] = {}
         self.memo = {}
-        self.last_heuristics = {}
         if use_instruction:
             self.load_prims(instruction)
         else:
@@ -80,6 +80,7 @@ class InstructedDSL:
             return frozenset(self.make_hashable(e) for e in obj)
         return obj
 
+    @lru_cache(maxsize=10000)
     def memoized_func(self, func, **kwargs):
         # Convert all values in kwargs to a hashable type
         hashable_kwargs = {k: self.make_hashable(v) for k, v in kwargs.items()}
@@ -91,7 +92,8 @@ class InstructedDSL:
     def solve(self, grid, target):
         chaining_pool = defaultdict(set)
         trace_pool = defaultdict(list)
-
+        grid = self.make_hashable(grid)
+        target = self.make_hashable(target)
         # Initialize chaining pool with depth=1 results
         for primitive, details in self.primitives.items():
             if not details['input_types'] or \
@@ -137,24 +139,47 @@ class InstructedDSL:
     def build_trace(self, candidate_chain, details, input_pools, input_traces):
         trace = []
         param_indices = {param_name: {v: i for i, v in enumerate(input_pools[param_name])} for param_name in details['input_types']}
+        
         for param_name, param_type in details['input_types'].items():
             param_value = candidate_chain[param_name]
             param_index = param_indices[param_name][param_value]
+            
+            # Debugging statements
+            if param_name not in input_traces:
+                print(f"Error: {param_name} not in input_traces")
+                continue
+            if param_index >= len(input_traces[param_name]):
+                print(f"Error: param_index {param_index} out of range for {param_name}")
+                continue
+            if not input_traces[param_name][param_index]:
+                print(f"Error: input_traces[{param_name}][{param_index}] is empty")
+                continue
+            
             trace.extend(input_traces[param_name][param_index])
-        trace.append((details['func'].__name__, {param_name: {"from": input_traces[param_name][param_index][-1][0]} for param_name in details['input_types']}))
+        
+        # Ensure all param_indices are valid before appending to trace
+        valid_trace = True
+        trace_dict = {}
+        for param_name in details['input_types']:
+            param_index = param_indices[param_name][candidate_chain[param_name]]
+            if param_index >= len(input_traces[param_name]) or not input_traces[param_name][param_index]:
+                valid_trace = False
+                break
+            trace_dict[param_name] = {"from": input_traces[param_name][param_index][-1][0]}
+        
+        if valid_trace:
+            trace.append((details['func'].__name__, trace_dict))
+        
         return trace
 
     def h(self, candidate_chain, target_grid):
         # Create a hashable key from the candidate chain
-        chain_key = frozenset(candidate_chain.items())
-        
+        # chain_key = frozenset(candidate_chain.items())
+        sim = 0.5
         if 'grid' in candidate_chain:
             grid = candidate_chain['grid']
             sim = grid_similarity(grid, target_grid)
-            self.last_heuristics[chain_key] = sim  # Store the heuristic value
-        else:
-            # Use the last heuristic value for this particular trace if available
-            sim = self.last_heuristics.get(chain_key, 0.5)
+            # self.last_heuristics[chain_key] = sim  # Store the heuristic value
         return sim
 
 def grid_similarity(grid1, grid2):
