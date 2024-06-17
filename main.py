@@ -85,7 +85,7 @@ if __name__ == '__main__':
         experiment_path = f'exp/{experiment_id}'
         os.makedirs(experiment_path, exist_ok=True)
         
-        with Pool() as pool:
+        with Pool(processes=16) as pool:
             results = list(tqdm(pool.imap(evaluate_task, [(key, task, train_solutions, experiment_path) for key, task in train_challenges.items()]), total=total_tasks, desc="Evaluating tasks"))
         
         correct_guess = sum(results)

@@ -27,7 +27,8 @@ class InstructedDSL:
         self.use_instruction = use_instruction
 
         self.primitives: Dict[str, Dict[str, Callable | type | Dict[str, type]]] = {}
-        self.memo = {}  # Initialize the memo attribute
+        self.memo = {}
+        self.last_heuristics = {}
         if use_instruction:
             self.load_prims(instruction)
         else:
@@ -144,10 +145,16 @@ class InstructedDSL:
         return trace
 
     def h(self, candidate_chain, target_grid):
-        sim = 0.5
+        # Create a hashable key from the candidate chain
+        chain_key = frozenset(candidate_chain.items())
+        
         if 'grid' in candidate_chain:
             grid = candidate_chain['grid']
-            return grid_similarity(grid, target_grid)
+            sim = grid_similarity(grid, target_grid)
+            self.last_heuristics[chain_key] = sim  # Store the heuristic value
+        else:
+            # Use the last heuristic value for this particular trace if available
+            sim = self.last_heuristics.get(chain_key, 0.5)
         return sim
 
 def grid_similarity(grid1, grid2):
