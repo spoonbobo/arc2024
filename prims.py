@@ -1,8 +1,6 @@
-from collections import Counter, deque
-
-import numpy as np
-
 from arc_types import *
+from collections import Counter
+import numpy as np
 
 # rotation
 def rot45(grid: Grid, fill_value: Integer) -> Grid:
@@ -225,11 +223,25 @@ def erode(grid: Grid) -> Grid:
     return tuple([tuple(row) for row in new_grid])
 
 # magic number
+# def is_prime(n: Integer) -> Boolean:
+#     """Checks if a number is prime."""
+#     if n <= 1:
+#         return False
+#     if n <= 3:
+#         return True
+#     if n % 2 == 0 or n % 3 == 0:
+#         return False
+#     i = 5
+#     while i * i <= n:
+#         if n % i == 0 or n % (i + 2) == 0:
+#             return False
+#         i += 6
+#     return True
 
 # coloring
-def invert_colors(grid: Grid) -> Grid:
-    """ Inverts the colors in the grid (assuming binary colors 0 and 1), ignoring None values """
-    return tuple([tuple(1 - cell for cell in row) for row in grid])
+# def invert_colors(grid: Grid) -> Grid:
+#     """ Inverts the colors in the grid (assuming binary colors 0 and 1), ignoring None values """
+#     return tuple([tuple(1 - cell for cell in row) for row in grid])
 
 def fill_color(grid: Grid, color: Integer) -> Grid:
     """ Fills the grid with the specified color, replacing all non-None values """
@@ -238,43 +250,6 @@ def fill_color(grid: Grid, color: Integer) -> Grid:
 def replace_value(grid: Grid, old_value: Integer, new_value: Integer) -> Grid:
     """Replaces all instances of old_value with new_value in the grid"""
     return tuple([tuple(new_value if cell == old_value else cell for cell in row) for row in grid])
-
-
-def flood_fill(grid: Grid, start_row: Integer, start_col: Integer, new_color: Integer) -> Grid:
-    rows, cols = len(grid), len(grid[0])
-    
-    # Check if the starting coordinates are within the grid's bounds
-    if not (0 <= start_row < rows and 0 <= start_col < cols):
-        return grid
-    
-    color_to_replace = grid[start_row][start_col]
-    if color_to_replace == new_color:
-        return grid
-    
-    q = deque([(start_row, start_col)])
-    new_grid = [list(row) for row in grid]
-    
-    while q:
-        x, y = q.popleft()
-        if new_grid[x][y] == color_to_replace:
-            new_grid[x][y] = new_color
-            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-                nx, ny = x + dx, y + dy
-                if 0 <= nx < rows and 0 <= ny < cols:
-                    q.append((nx, ny))
-    
-    return tuple(tuple(row) for row in new_grid)
-
-def normalize_grid(grid: Grid, new_min: Integer, new_max: Integer) -> Grid:
-    """ Normalizes the grid values to a new range [new_min, new_max]. """
-    old_min = min(min(row) for row in grid)
-    old_max = max(max(row) for row in grid)
-    range_old = old_max - old_min
-    if range_old == 0:
-        # If all values are the same, return the grid filled with new_min
-        return tuple([tuple(new_min for _ in row) for row in grid])
-    range_new = new_max - new_min
-    return tuple([tuple(int((cell - old_min) / range_old * range_new + new_min) for cell in row) for row in grid])
 
 # border manipulations
 def add_border(grid: Grid, border_value: Integer) -> Grid:
@@ -298,14 +273,6 @@ def boolean_and(grid1: Grid, grid2: Grid) -> Grid:
 def boolean_or(grid1: Grid, grid2: Grid) -> Grid:
     """Performs element-wise OR operation between two grids."""
     return tuple([tuple(cell1 or cell2 for cell1, cell2 in zip(row1, row2)) for row1, row2 in zip(grid1, grid2)])
-
-def is_square_grid(grid: Grid) -> Boolean:
-    """Checks if the grid is square."""
-    return len(grid) == len(grid[0]) if grid else False
-
-def contains_value(grid: Grid, value: Integer) -> Boolean:
-    """Checks if the grid contains a specific value."""
-    return any(value in row for row in grid)
 
 # heuristics
 def grid_mean(grid: Grid) -> Integer:
@@ -338,44 +305,10 @@ def grid_min(grid: Grid) -> Integer:
         return 0
     return min(flat_list)
 
-def grid_sum(grid: Grid) -> Integer:
-    """Calculates the sum of all values in the grid."""
-    return sum(sum(row) for row in grid)
-
 def count_nonzero(grid: Grid) -> Integer:
     """Counts the number of non-zero values in the grid."""
     return sum(1 for row in grid for cell in row if cell != 0)
 
-def count_value(grid: Grid, value: Integer) -> Integer:
-    """Counts the number of occurrences of a specific value in the grid."""
-    return sum(row.count(value) for row in grid)
-
-def get_value(grid: Grid, row: Integer, col: Integer) -> Integer:
-    """Get the value at a specific cell in the grid."""
-    if 0 <= row < len(grid) and 0 <= col < len(grid[0]):
-        return grid[row][col]
-    else:
-        return 0
-
-def column_sums(grid: Grid) -> IntegerList:
-    """Calculates the sum of each column in the grid."""
-    return tuple(sum(row[i] for row in grid) for i in range(len(grid[0])))
-
-# rows
-def sort_integer_list(int_list: IntegerList) -> IntegerList:
-    """Sorts the list of integers in ascending order."""
-    return tuple(sorted(int_list))
-
-# numbers
-def sum_integer_list(int_list: IntegerList) -> Integer:
-    """Calculates the sum of all integers in the list."""
-    return sum(int_list)
-
-def min_integer_list(int_list: IntegerList) -> Integer:
-    """Finds the minimum value in the list."""
-    return min(int_list) if int_list else 0
-
-def max_integer_list(int_list: IntegerList) -> Integer:
-    """Finds the maximum value in the list."""
-    return max(int_list) if int_list else 0
-
+# def count_value(grid: Grid, value: Integer) -> Integer:
+#     """Counts the number of occurrences of a specific value in the grid."""
+#     return sum(row.count(value) for row in grid)

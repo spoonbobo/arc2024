@@ -79,8 +79,8 @@ class InstructedDSL:
         return [{key: value for key, value in zip(keys, values)} for values in values_product]
     
     def solve(self, grid, target):
-        chaining_pool = defaultdict(set)  # Use set for chaining pool
-        trace_pool = defaultdict(list)  # Dictionary to store traces of primitives and their input parameters
+        chaining_pool = defaultdict(set)
+        trace_pool = defaultdict(list)
 
         # Initialize chaining pool with depth=1 results
         for primitive, details in self.primitives.items():
@@ -90,41 +90,38 @@ class InstructedDSL:
                 args = {param_name: grid for param_name in details['input_types']}
                 result = details['func'](**args)
                 if result == target:
-                    return True, result, [(primitive, args)]  # Return the primitive and its args as part of the trace
+                    return True, result, [(primitive, args)]
                 chaining_pool[details['return_type']].add(result)
-                trace_pool[details['return_type']].append([(primitive, {param_name: {"from": None} for param_name in details['input_types']})])  # Store initial trace with args
+                trace_pool[details['return_type']].append([(primitive, {param_name: {"from": None} for param_name in details['input_types']})])
 
-        # Chain combinations of previous results for deeper levels
         for depth in range(2, self.max_depth + 1):
-            new_traces = defaultdict(list)  # New dictionary for updated traces
+            new_traces = defaultdict(list)
             for primitive, details in self.primitives.items():
-                input_pools = {param_name: chaining_pool[param_type] 
-                            for param_name, param_type in details['input_types'].items()}
-                input_traces = {param_name: trace_pool[param_type] 
-                                for param_name, param_type in details['input_types'].items()}
+                input_pools = {param_name: chaining_pool[param_type] for param_name, param_type in details['input_types'].items()}
+                input_traces = {param_name: trace_pool[param_type] for param_name, param_type in details['input_types'].items()}
                 candidate_chains = self.generate_chains(input_pools)
                 
-                # Apply beam search: keep only the top `beam_width` candidate chains
                 if self.use_beam:
                     candidate_chains = sorted(candidate_chains, key=lambda x: self.h(x, target))[:self.beam_width]
                 
                 for candidate_chain in candidate_chains:
                     result = details['func'](**candidate_chain)
                     if result == target:
-                        # Gather the trace leading to the successful result
                         trace = []
                         for param_name, param_type in details['input_types'].items():
-                            trace.extend(input_traces[param_name][list(input_pools[param_name]).index(candidate_chain[param_name])])
-                        trace.append((primitive, {param_name: {"from": input_traces[param_name][list(input_pools[param_name]).index(candidate_chain[param_name])][-1][0]} for param_name in details['input_types']}))  # Append the current primitive and its args
-                        return True, result, trace  # Return the successful trace
-                    # Update the trace with the current primitive and its args
+                            param_value = candidate_chain[param_name]
+                            param_index = {v: i for i, v in enumerate(input_pools[param_name])}[param_value]
+                            trace.extend(input_traces[param_name][param_index])
+                        trace.append((primitive, {param_name: {"from": input_traces[param_name][param_index][-1][0]} for param_name in details['input_types']}))
+                        return True, result, trace
                     current_trace = []
                     for param_name in details['input_types'].keys():
-                        current_trace.extend(input_traces[param_name][list(input_pools[param_name]).index(candidate_chain[param_name])])
-                    current_trace.append((primitive, {param_name: {"from": input_traces[param_name][list(input_pools[param_name]).index(candidate_chain[param_name])][-1][0]} for param_name in details['input_types']}))
-                    new_traces[details['return_type']].append((result, current_trace))  # Append the result and the current trace
+                        param_value = candidate_chain[param_name]
+                        param_index = {v: i for i, v in enumerate(input_pools[param_name])}[param_value]
+                        current_trace.extend(input_traces[param_name][param_index])
+                    current_trace.append((primitive, {param_name: {"from": input_traces[param_name][param_index][-1][0]} for param_name in details['input_types']}))
+                    new_traces[details['return_type']].append((result, current_trace))
 
-            # Update chaining pool and trace pool with new traces
             for ret_type, traces in new_traces.items():
                 for result, trace in traces:
                     chaining_pool[ret_type].add(result)
