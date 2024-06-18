@@ -1,7 +1,29 @@
-from sklearn.datasets import make_blobs
+# import numpy as np
+import json
 
-# example dataset
-# https://qiskit-community.github.io/qiskit-machine-learning/tutorials/07_pegasos_qsvc.html
-features, labels = make_blobs(n_samples=20, n_features=10, centers=2, random_state=3, shuffle=True)
+from utils import plot_grids
 
-print(features[0])
+class VQCSolver:
+
+    def __init__(self, data, labels):
+        self.data = data
+        self.labels = labels
+
+    def solve(self, grid, target):
+        pass
+
+
+if __name__ == "__main__":
+    base_path = '../arc-prize-2024'
+    testing_data = json.load(open(f'{base_path}/arc-agi_test_challenges.json', 'r'))
+    
+    for key, task in testing_data.items():
+        test_data = task['train']
+        for pair in test_data:
+            grid = pair['input']
+            target = pair['output']
+            plot_grids([grid], [''])
+            print(grid)
+            print(target)
+            break
+        break
