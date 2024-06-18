@@ -80,7 +80,7 @@ class InstructedDSL:
             return frozenset(self.make_hashable(e) for e in obj)
         return obj
 
-    @lru_cache(maxsize=100)
+    @lru_cache(maxsize=500)
     def memoized_func(self, func, **kwargs):
         # Convert all values in kwargs to a hashable type
         hashable_kwargs = {k: self.make_hashable(v) for k, v in kwargs.items()}
@@ -186,12 +186,17 @@ def grid_similarity(grid1, grid2):
     if not grid1 or not grid2:
         return float('inf')  # Handle empty grids
 
-    rows1, cols1 = len(grid1), len(grid1[0])
-    rows2, cols2 = len(grid2), len(grid2[0])
+    rows1, cols1 = len(grid1), len(grid1[0]) if grid1 else 0
+    rows2, cols2 = len(grid2), len(grid2[0]) if grid2 else 0
 
     overlap_rows = min(rows1, rows2)
     overlap_cols = min(cols1, cols2)
-    overlap_area = sum(1 for i in range(overlap_rows) for j in range(overlap_cols) if grid1[i][j] == grid2[i][j])
+    
+    overlap_area = 0
+    for i in range(overlap_rows):
+        for j in range(overlap_cols):
+            if i < rows1 and j < len(grid1[i]) and i < rows2 and j < len(grid2[i]) and grid1[i][j] == grid2[i][j]:
+                overlap_area += 1
 
     total_area = rows1 * cols1 + rows2 * cols2 - overlap_area
 

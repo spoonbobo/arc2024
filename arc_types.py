@@ -14,22 +14,28 @@ import typing
 
 Boolean = bool
 Integer = int
-IntegerList = Tuple[Integer, ...]
-Numerical = Union[Integer, IntegerList]
+IntegerTuple = Tuple[Integer, Integer]
+Numerical = Union[Integer, IntegerTuple]
 IntegerSet = FrozenSet[Integer]
-Grid = Tuple[Tuple[Integer, ...], ...]
-Cell = Tuple[Union[Integer, IntegerList], ...]
+Grid = Tuple[Tuple[Integer]]
+Cell = Tuple[Integer, IntegerTuple]
 Object = FrozenSet[Cell]
 Objects = FrozenSet[Object]
-Indices = FrozenSet[IntegerList]
+Indices = FrozenSet[IntegerTuple]
 IndicesSet = FrozenSet[Indices]
 Patch = Union[Object, Indices]
 Element = Union[Object, Grid]
 Piece = Union[Grid, Patch]
-ListList = Tuple[Tuple[Any, ...], ...]
+TupleTuple = Tuple[Tuple]
 ContainerContainer = Container[Container]
 
+
 param_mapping = {
+    'boolean': Boolean,
+    'integer': Integer,
+    'integer_tuple': IntegerTuple,
+    'numerical': Numerical,
+    'integer_set': IntegerSet,
     'grid': Grid,
     'cell': Cell,
     'object': Object,
@@ -39,4 +45,6 @@ param_mapping = {
     'patch': Patch,
     'element': Element,
     'piece': Piece,
+    'tuple_tuple': TupleTuple,
+    'container_container': ContainerContainer,
 }

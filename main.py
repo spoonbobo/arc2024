@@ -16,7 +16,7 @@ from solvers.dsl import InstructedDSL
 base_path = 'arc-prize-2024/'
 max_depth = 5
 use_beam = True
-beam_width = 5
+beam_width = 2
 
 # data
 train_challenges = load_json(base_path + 'arc-agi_training_challenges.json')
