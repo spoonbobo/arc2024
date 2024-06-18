@@ -6,7 +6,7 @@ from arc_types import *
 from prims import *
 from utils import load_json
 from llm import PrimitiveInstructor
-from solver import InstructedDSL
+from solvers.dsl import InstructedDSL
 
 base_path = 'arc-prize-2024/'
 max_depth = 4

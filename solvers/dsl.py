@@ -80,7 +80,7 @@ class InstructedDSL:
             return frozenset(self.make_hashable(e) for e in obj)
         return obj
 
-    @lru_cache(maxsize=10000)
+    @lru_cache(maxsize=100)
     def memoized_func(self, func, **kwargs):
         # Convert all values in kwargs to a hashable type
         hashable_kwargs = {k: self.make_hashable(v) for k, v in kwargs.items()}
@@ -197,5 +197,5 @@ def grid_similarity(grid1, grid2):
 
     return 1 - (overlap_area / total_area)
 
-if __name__ == '__main__':
-    idsl = InstructedDSL()
+class QSVMSolver:
+    pass
