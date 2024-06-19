@@ -14,9 +14,9 @@ from solvers.dsl import InstructedDSL
 # for development, enable solver with trace to see primitives and visualize results
 
 base_path = 'arc-prize-2024/'
-max_depth = 5
-use_beam = True
-beam_width = 2
+max_depth = 3
+use_beam = False
+beam_width = 10
 
 # data
 train_challenges = load_json(base_path + 'arc-agi_training_challenges.json')

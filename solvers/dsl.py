@@ -117,7 +117,13 @@ class InstructedDSL:
                     candidate_chains = sorted(candidate_chains, key=lambda x: self.h(x, target))[:self.beam_width]
 
                 for candidate_chain in candidate_chains:
-                    result = self.memoized_func(details['func'], **candidate_chain)
+                    try:
+                        result = self.memoized_func(details['func'], **candidate_chain)
+                    except:
+                        # print(primitive, 'returns', None)
+                        continue
+                    if result is None:
+                        continue
                     if result == target:
                         trace = self.build_trace(candidate_chain, details, input_pools, input_traces)
                         return True, result, trace
