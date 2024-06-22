@@ -48,14 +48,13 @@ def evaluate_task(args):
         test_output = train_solutions[key][0]
         test_output = tuple(tuple(row) for row in test_output)
         # solution = arc_agent.solve(train_inputs, train_outputs, test_input, key)
-        # print(solution, test_output)
-        # exit()
         idsl = InstructedDSL(max_depth=max_depth, use_beam=use_beam, beam_width=beam_width)
-        if BOOTSTRAP_DATA:
-            solutions = idsl.solve(train_inputs, test_output, key, bootstrap=True)
-        else:
-            solutions = idsl.solve(test_input, test_output)
         solutions = []
+        for grid_id, (train_inp, train_out) in enumerate(zip(train_inputs, train_outputs)):
+            if BOOTSTRAP_DATA:
+                solutions.append(idsl.solve(train_inp, train_out, key, grid_id, bootstrap=True))
+            else:
+                solutions.append(idsl.solve(test_input, test_output, key, grid_id))
     
         # # Determine result folder based on success or failure
         result_folder = "success" if solutions else "failed"

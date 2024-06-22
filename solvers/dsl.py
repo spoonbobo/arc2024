@@ -95,7 +95,7 @@ class InstructedDSL:
             self.memo[key] = func(**kwargs)
         return self.memo[key]
 
-    def solve(self, grid, target, key, bootstrap=True):
+    def solve(self, grid, target, key, grid_id, bootstrap=True):
         def make_serializable(obj):
             if isinstance(obj, (set, frozenset)):
                 return [make_serializable(e) for e in obj]
@@ -129,6 +129,8 @@ class InstructedDSL:
                 (len(details['input_types']) == 1 and Grid in details['input_types'].values()) or \
                     (len(details['input_types']) == 1 and Tuple[Tuple[int]] in details['input_types'].values()):
                 args = {param_name: grid for param_name in details['input_types']}
+                # print(key, grid, grid_id, target)
+                # exit()
                 try:
                     result = self.memoized_func(details['func'], **args)
                 except:
@@ -139,7 +141,6 @@ class InstructedDSL:
                     # print(f"Result type: {type(result)}, Origin: {get_origin(result)}, Args: {get_args(result)}")
                     if isinstance(result, tuple) and all(isinstance(item, tuple) and all(isinstance(i, int) for i in item) for item in result):
                         if len(result) and len(result[0]) and all(len(row) == len(result[0]) for row in result):
-                            trace = self.build_trace(candidate_chain, details, input_pools, input_traces)
                             data.append({'result': result, 'trace': [(primitive, args)]})
                 
                 chaining_pool[details['return_type']].add(result)
@@ -183,7 +184,8 @@ class InstructedDSL:
 
         if bootstrap:
             os.makedirs('dataset', exist_ok=True) 
-            json.dump(data, open(f'dataset/{key}.json', 'w'))
+            json.dump(data, open(f'dataset/{key}_{grid_id}.json', 'w'))
+
         return solutions
 
     def generate_chains(self, input_pools: Dict[str, Set[Any]]):
