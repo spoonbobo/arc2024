@@ -4,26 +4,40 @@ import uuid
 from tqdm import tqdm
 from multiprocessing import Pool, Manager
 import traceback
+import shutil  # Add this import
+
 
 from arc_types import *
 from prims import *
 from utils import load_json, plot_grids, save_image
 from solvers.dsl import InstructedDSL
-# from llm import PrimitiveInstructor
+from llm import ARCAgent
 
 # for development, enable solver with trace to see primitives and visualize results
 
 base_path = 'arc-prize-2024/'
 max_depth = 3
-use_beam = False
-beam_width = 10
+use_beam = True
+beam_width = 3
+
+SUBMISSION = False
+BOOTSTRAP_DATA = True
+USE_AI_AGENT = False
+
+if BOOTSTRAP_DATA:
+    use_beam = False
 
 # data
 train_challenges = load_json(base_path + 'arc-agi_training_challenges.json')
 train_solutions = load_json(base_path + 'arc-agi_training_solutions.json')
+test_challenges = load_json(base_path + 'arc-agi_test_challenges.json')
 
-# TODO: hypothesis in training phases
-# TODO: improve efficiency at scaling up
+if USE_AI_AGENT:
+    arc_agent = ARCAgent(return_primitives=True, model_path='microsoft/Phi-3-mini-4k-instruct', tokenizer_path='microsoft/Phi-3-mini-4k-instruct')
+max_llm_retry = 3
+
+if os.path.exists('dataset'):
+    shutil.rmtree('dataset')
 
 def evaluate_task(args):
     try:
@@ -32,47 +46,47 @@ def evaluate_task(args):
         train_outputs = [example['output'] for example in task['train']]
         test_input = task['test'][0]['input']
         test_output = train_solutions[key][0]
-        # convert test_output to tuple of tuples
         test_output = tuple(tuple(row) for row in test_output)
-        # primitive_instructor = PrimitiveInstructor(None)
+        # solution = arc_agent.solve(train_inputs, train_outputs, test_input, key)
+        # print(solution, test_output)
+        # exit()
         idsl = InstructedDSL(max_depth=max_depth, use_beam=use_beam, beam_width=beam_width)
-        res, result, trace = idsl.solve(test_input, 
-                                        test_output)
-
-        # Determine result folder based on success or failure
-        result_folder = "success" if res else "failed"
+        if BOOTSTRAP_DATA:
+            solutions = idsl.solve(train_inputs, test_output, key, bootstrap=True)
+        else:
+            solutions = idsl.solve(test_input, test_output)
+        solutions = []
+    
+        # # Determine result folder based on success or failure
+        result_folder = "success" if solutions else "failed"
         exp_path = f'{experiment_path}/{result_folder}/{key}'
         os.makedirs(exp_path, exist_ok=True)
         
-        if res:
-            # Save primitives as JSON
-            primitives_data = {p[0]: p[1] for p in trace}
-            with open(f'{exp_path}/primitives_trace.json', 'w') as f:
-                json.dump(primitives_data, f, indent=4)
+        # if candidate_traces:
+        #     for i, trace in enumerate(candidate_traces):
+        #         # Save primitives as JSON
+        #         primitives_data = {p[0]: p[1] for p in trace}
+        #         with open(f'{exp_path}/primitives_trace_{i}.json', 'w') as f:
+        #             json.dump(primitives_data, f, indent=4)
             
-            print(key, f'{[p[0] for p in trace]}')
-            
-            with open(f'{exp_path}/primitives_trace.txt', 'w') as f:
-                for p in trace:
-                    f.write(f"{p[0]}\n")
+        #         with open(f'{exp_path}/primitives_trace_{i}.txt', 'w') as f:
+        #             for p in trace:
+        #                 f.write(f"{p[0]}\n")
 
         # Save predictions
-        with open(f'{exp_path}/result.json', 'w') as f:
-            json.dump({'input': test_input, 'result': result, 'ground_truth': test_output}, f)
-        
-        # Prepare titles for each grid
-        train_input_titles = [f'Train Input {i+1}' for i in range(len(train_inputs))]
-        train_output_titles = [f'Train Output {i+1}' for i in range(len(train_outputs))]
-        titles = train_input_titles + train_output_titles + ['Test Input', 'Result', 'Ground Truth']
-        
+        # with open(f'{exp_path}/result.json', 'w') as f:
+        #     json.dump({'input': test_input, 'result': candidate_traces[0][-1][1] if candidate_traces else None, 'ground_truth': test_output}, f)
         # Combine all grids and plot
-        all_grids = train_inputs + train_outputs + [test_input, result, test_output]
-        save_image(plot_grids(all_grids, titles), f'{exp_path}/grid.png')
+        if not SUBMISSION:
+            train_input_titles = [f'Train Input {i+1}' for i in range(len(train_inputs))]
+            train_output_titles = [f'Train Output {i+1}' for i in range(len(train_outputs))]
+            titles = train_input_titles + train_output_titles + ['Test Input', 'Prediction', 'Ground Truth']
+            all_grids = train_inputs + train_outputs + [test_input, test_input, test_output]
+            # todo: fix it save_image(plot_grids(all_grids, titles), f'{exp_path}/grid.png')
         
-        return res
+        return bool(solutions)
     except Exception as e:
         traceback.print_exc()
-        # exit()
         return False
 
 if __name__ == '__main__':
@@ -85,13 +99,19 @@ if __name__ == '__main__':
         experiment_path = f'exp/{experiment_id}'
         os.makedirs(experiment_path, exist_ok=True)
         
-        with Pool() as pool:
-            results = list(tqdm(pool.imap(evaluate_task, [(key, task, train_solutions, experiment_path) for key, task in train_challenges.items()]), total=total_tasks, desc="Evaluating tasks"))
+        results = []
+        # with Pool() as pool:
+        #     if not SUBMISSION:
+        #         results = list(tqdm(pool.imap(evaluate_task, [(key, task, train_solutions, experiment_path) for key, task in train_challenges.items()]), total=total_tasks, desc="Evaluating tasks"))
+        #     else:
+        #         results = list(tqdm(pool.imap(evaluate_task, [(key, task, train_solutions, experiment_path) for key, task in test_challenges.items()]), total=total_tasks, desc="Evaluating tasks"))
         
-        # for key, task in tqdm(train_challenges.items(), total=total_tasks, desc="Evaluating tasks"):
-        #     result = evaluate_task((key, task, train_solutions, experiment_path))
-        #     results.append(result)
-        #     # exit()
+        for key, task in tqdm(train_challenges.items(), total=total_tasks, desc="Evaluating tasks"):
+            result = evaluate_task((key, task, train_solutions, experiment_path))
+            results.append(result)
+            break
+            exit()
     
-        correct_guess = sum(results)
+        # correct_guess = sum(results)
         print(f'\nMade correct guesses for {correct_guess} out of {total_tasks} tasks')
+

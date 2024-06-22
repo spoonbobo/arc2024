@@ -1,10 +1,14 @@
 from itertools import product
 from typing import Any, List, Tuple, Set, get_type_hints, Dict, Callable
+from typing import get_origin, get_args
 from collections import defaultdict
 from functools import lru_cache
 import inspect
 import types
 import ast
+import os
+import json
+import uuid
 
 import prims
 import arc_types
@@ -20,12 +24,14 @@ class InstructedDSL:
                  instruction: str = '',
                  use_instruction: bool = False,
                  use_beam: bool = False,
-                 beam_width: int = 2):
+                 beam_width: int = 2,
+                 bootstrap_data: bool = False):
 
         self.max_depth = max_depth
         self.use_beam = use_beam
         self.beam_width = beam_width
         self.use_instruction = use_instruction
+        self.bootstrap_data = bootstrap_data
 
         self.primitives: Dict[str, Dict[str, Callable | type | Dict[str, type]]] = {}
         self.memo = {}
@@ -89,24 +95,58 @@ class InstructedDSL:
             self.memo[key] = func(**kwargs)
         return self.memo[key]
 
-    def solve(self, grid, target):
+    def solve(self, grid, target, key, bootstrap=True):
+        def make_serializable(obj):
+            if isinstance(obj, (set, frozenset)):
+                return [make_serializable(e) for e in obj]
+            if isinstance(obj, dict):
+                return {k: make_serializable(v) for k, v in obj.items()}
+            if isinstance(obj, list):
+                return [make_serializable(e) for e in obj]
+            if isinstance(obj, tuple):
+                return tuple(make_serializable(e) for e in obj)
+            if isinstance(obj, (int, float, str, bool)) or obj is None:
+                return obj
+            if hasattr(obj, '__dict__'):
+                return make_serializable(vars(obj))
+            return str(obj)  # Fallback for other types
         chaining_pool = defaultdict(set)
         trace_pool = defaultdict(list)
+        solutions  = []
+        if bootstrap:
+            data = []
         grid = self.make_hashable(grid)
         target = self.make_hashable(target)
-        # Initialize chaining pool with depth=1 results
+
+        # Initialize static params
+        for symbol in range(10):
+            chaining_pool[Integer].add(symbol)
+            trace_pool[Integer].append([(f'symbol_{symbol}', {'void': {'from': None}})])
+        
+        # Initialize primitives
         for primitive, details in self.primitives.items():
             if not details['input_types'] or \
                 (len(details['input_types']) == 1 and Grid in details['input_types'].values()) or \
                     (len(details['input_types']) == 1 and Tuple[Tuple[int]] in details['input_types'].values()):
                 args = {param_name: grid for param_name in details['input_types']}
-                result = self.memoized_func(details['func'], **args)
+                try:
+                    result = self.memoized_func(details['func'], **args)
+                except:
+                    continue
                 if result == target:
-                    return True, result, [(primitive, args)]
+                    solutions.append((True, result, [(primitive, args)]))
+                if bootstrap:
+                    # print(f"Result type: {type(result)}, Origin: {get_origin(result)}, Args: {get_args(result)}")
+                    if isinstance(result, tuple) and all(isinstance(item, tuple) and all(isinstance(i, int) for i in item) for item in result):
+                        if len(result) and len(result[0]) and all(len(row) == len(result[0]) for row in result):
+                            trace = self.build_trace(candidate_chain, details, input_pools, input_traces)
+                            data.append({'result': result, 'trace': [(primitive, args)]})
+                
                 chaining_pool[details['return_type']].add(result)
                 trace_pool[details['return_type']].append([(primitive, {param_name: {"from": None} for param_name in details['input_types']})])
 
         for depth in range(2, self.max_depth + 1):
+            print('at depth', depth)
             new_traces = defaultdict(list)
             for primitive, details in self.primitives.items():
                 input_pools = {param_name: chaining_pool[param_type] for param_name, param_type in details['input_types'].items()}
@@ -126,7 +166,13 @@ class InstructedDSL:
                         continue
                     if result == target:
                         trace = self.build_trace(candidate_chain, details, input_pools, input_traces)
-                        return True, result, trace
+                        solutions.append((True, result, trace))
+                    if bootstrap:
+                        # print(f"Result type: {type(result)}, Origin: {get_origin(result)}, Args: {get_args(result)}")
+                        if isinstance(result, tuple) and all(isinstance(item, tuple) and all(isinstance(i, int) for i in item) for item in result):
+                            if len(result) and len(result[0]) and all(len(row) == len(result[0]) for row in result):
+                                trace = self.build_trace(candidate_chain, details, input_pools, input_traces)
+                                data.append({'result': result, 'trace': trace})
                     current_trace = self.build_trace(candidate_chain, details, input_pools, input_traces)
                     new_traces[details['return_type']].append((result, current_trace))
 
@@ -135,7 +181,10 @@ class InstructedDSL:
                     chaining_pool[ret_type].add(result)
                     trace_pool[ret_type].append(trace)
 
-        return False, None, None
+        if bootstrap:
+            os.makedirs('dataset', exist_ok=True) 
+            json.dump(data, open(f'dataset/{key}.json', 'w'))
+        return solutions
 
     def generate_chains(self, input_pools: Dict[str, Set[Any]]):
         keys = input_pools.keys()
@@ -207,6 +256,3 @@ def grid_similarity(grid1, grid2):
     total_area = rows1 * cols1 + rows2 * cols2 - overlap_area
 
     return 1 - (overlap_area / total_area)
-
-class QSVMSolver:
-    pass

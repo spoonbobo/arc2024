@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import colors
 import json
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
 # Define the color map and normalization once, to be used throughout the module
 _cmap = colors.ListedColormap([
@@ -31,14 +32,27 @@ def plot_one(ax, grid, title):
     ax.set_yticklabels([])
     ax.set_title(title)
 
-def plot_grids(grids, titles):
+def plot_grids(grids_a, grids_b, titles_a, titles_b):
     """
-    Plots a list of grids with custom titles and returns the figure.
+    Plots two lists of grids with custom titles in two rows and returns the figure.
     """
-    num_grids = len(grids)
-    fig, axs = plt.subplots(1, num_grids, figsize=(3 * num_grids, 3))
-    for i, grid in enumerate(grids):
-        plot_one(axs[i], grid, titles[i])
+    num_grids_a = len(grids_a)
+    num_grids_b = len(grids_b)
+    num_grids = max(num_grids_a, num_grids_b)
+    
+    fig, axs = plt.subplots(2, num_grids, figsize=(3 * num_grids, 6))
+    
+    for i in range(num_grids):
+        if i < num_grids_a:
+            plot_one(axs[0, i], grids_a[i], titles_a[i])
+        else:
+            axs[0, i].axis('off')  # Turn off the axis if there's no grid to plot
+        
+        if i < num_grids_b:
+            plot_one(axs[1, i], grids_b[i], titles_b[i])
+        else:
+            axs[1, i].axis('off')  # Turn off the axis if there's no grid to plot
+    
     plt.tight_layout()
     return fig
 
@@ -56,3 +70,13 @@ def load_json(file_path):
     with open(file_path) as f:
         data = json.load(f)
     return data
+
+def plot_to_array(fig):
+    """
+    Converts a Matplotlib figure to an RGB numpy array.
+    """
+    canvas = FigureCanvas(fig)
+    canvas.draw()
+    buf = canvas.buffer_rgba()
+    array = np.asarray(buf)
+    return array[:, :, :3]  # Return only the RGB channels
