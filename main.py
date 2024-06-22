@@ -53,6 +53,7 @@ def evaluate_task(args):
         for grid_id, (train_inp, train_out) in enumerate(zip(train_inputs, train_outputs)):
             if BOOTSTRAP_DATA:
                 solutions.append(idsl.solve(train_inp, train_out, key, grid_id, bootstrap=True))
+                exit()
             else:
                 solutions.append(idsl.solve(test_input, test_output, key, grid_id))
     

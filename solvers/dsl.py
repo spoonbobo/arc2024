@@ -138,7 +138,6 @@ class InstructedDSL:
                 if result == target:
                     solutions.append((True, result, [(primitive, args)]))
                 if bootstrap:
-                    # print(f"Result type: {type(result)}, Origin: {get_origin(result)}, Args: {get_args(result)}")
                     if isinstance(result, tuple) and all(isinstance(item, tuple) and all(isinstance(i, int) for i in item) for item in result):
                         if len(result) and len(result[0]) and all(len(row) == len(result[0]) for row in result):
                             data.append({'result': result, 'trace': [(primitive, args)]})
