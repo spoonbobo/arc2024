@@ -123,29 +123,10 @@ class InstructedDSL:
             chaining_pool[Integer].add(symbol)
             trace_pool[Integer].append([(f'symbol_{symbol}', {'void': {'from': None}})])
         
-        # Initialize primitives
-        for primitive, details in self.primitives.items():
-            if not details['input_types'] or \
-                (len(details['input_types']) == 1 and Grid in details['input_types'].values()) or \
-                    (len(details['input_types']) == 1 and Tuple[Tuple[int]] in details['input_types'].values()):
-                args = {param_name: grid for param_name in details['input_types']}
-                # print(key, grid, grid_id, target)
-                # exit()
-                try:
-                    result = self.memoized_func(details['func'], **args)
-                except:
-                    continue
-                if result == target:
-                    solutions.append((True, result, [(primitive, args)]))
-                if bootstrap:
-                    if isinstance(result, tuple) and all(isinstance(item, tuple) and all(isinstance(i, int) for i in item) for item in result):
-                        if len(result) and len(result[0]) and all(len(row) == len(result[0]) for row in result):
-                            data.append({'result': result, 'trace': [(primitive, args)]})
-                
-                chaining_pool[details['return_type']].add(result)
-                trace_pool[details['return_type']].append([(primitive, {param_name: {"from": None} for param_name in details['input_types']})])
+        chaining_pool[Grid].add(grid)
+        trace_pool[Grid].append([('grid', {'grid': {'from': None}})])
 
-        for depth in range(2, self.max_depth + 1):
+        for depth in range(1, self.max_depth + 1):
             print('at depth', depth)
             new_traces = defaultdict(list)
             for primitive, details in self.primitives.items():
@@ -168,11 +149,8 @@ class InstructedDSL:
                         trace = self.build_trace(candidate_chain, details, input_pools, input_traces)
                         solutions.append((True, result, trace))
                     if bootstrap:
-                        # print(f"Result type: {type(result)}, Origin: {get_origin(result)}, Args: {get_args(result)}")
-                        if isinstance(result, tuple) and all(isinstance(item, tuple) and all(isinstance(i, int) for i in item) for item in result):
-                            if len(result) and len(result[0]) and all(len(row) == len(result[0]) for row in result):
-                                trace = self.build_trace(candidate_chain, details, input_pools, input_traces)
-                                data.append({'result': result, 'trace': trace})
+                        trace = self.build_trace(candidate_chain, details, input_pools, input_traces)
+                        data.append({'result': make_serializable(result), 'trace': trace})
                     current_trace = self.build_trace(candidate_chain, details, input_pools, input_traces)
                     new_traces[details['return_type']].append((result, current_trace))
 

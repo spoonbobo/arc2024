@@ -16,7 +16,7 @@ from llm import ARCAgent
 # for development, enable solver with trace to see primitives and visualize results
 
 base_path = 'arc-prize-2024/'
-max_depth = 3
+max_depth = 1
 use_beam = True
 beam_width = 3
 
@@ -53,7 +53,7 @@ def evaluate_task(args):
         for grid_id, (train_inp, train_out) in enumerate(zip(train_inputs, train_outputs)):
             if BOOTSTRAP_DATA:
                 solutions.append(idsl.solve(train_inp, train_out, key, grid_id, bootstrap=True))
-                exit()
+                # exit()
             else:
                 solutions.append(idsl.solve(test_input, test_output, key, grid_id))
     
@@ -106,11 +106,15 @@ if __name__ == '__main__':
         #     else:
         #         results = list(tqdm(pool.imap(evaluate_task, [(key, task, train_solutions, experiment_path) for key, task in test_challenges.items()]), total=total_tasks, desc="Evaluating tasks"))
         
+        ct = 0
         for key, task in tqdm(train_challenges.items(), total=total_tasks, desc="Evaluating tasks"):
             result = evaluate_task((key, task, train_solutions, experiment_path))
             results.append(result)
-            break
-            exit()
+            
+            if ct > 3:
+                break
+            ct += 1
+        
     
         # correct_guess = sum(results)
         print(f'\nMade correct guesses for {correct_guess} out of {total_tasks} tasks')

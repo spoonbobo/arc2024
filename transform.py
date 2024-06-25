@@ -1,11 +1,12 @@
 import os
 import json
 import shutil
+from tqdm import tqdm
 import uuid
 
 # Define the input and output directories
 input_dir = 'dataset'
-output_dir = 'myDataset'
+output_dir = 'NewDataset2'
 
 # Ensure the output directory is clean
 if os.path.exists(output_dir):
@@ -20,9 +21,12 @@ def process_trace(trace):
     return '-'.join(unique_operations)
 
 # Iterate over all JSON files in the input directory
-for filename in os.listdir(input_dir):
+for filename in tqdm(os.listdir(input_dir)):
     if filename.endswith('.json'):
         input_path = os.path.join(input_dir, filename)
+        
+        filename = os.path.splitext(filename)[0]
+        task_key, grid_id = filename.split('_')
         
         # Read the JSON file
         with open(input_path, 'r') as file:
@@ -41,13 +45,17 @@ for filename in os.listdir(input_dir):
             # Create a new JSON file with a single entry
             new_entry = {
                 "result": result,
-                "trace": trace
+                "trace": trace,
+                "task_key": task_key,
+                "grid_id": grid_id
             }
             new_filename = f"{uuid.uuid4()}.json"
             output_path = os.path.join(new_dir_path, new_filename)
             with open(output_path, 'w') as file:
                 json.dump(new_entry, file, indent=4)
-    
-    break
+    # break
 
+# https://www.mlexpert.io/blog/alpaca-fine-tuning
+# TODO: group combs across training grids for dataset loading (3/4 training input)
+# TODO: wrap all into a single JSON file
 print("Transformation complete.")
