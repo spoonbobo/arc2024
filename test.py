@@ -1,22 +1,5 @@
 from prims import *
 
-i_g = [
-                    [
-                        0,
-                        7,
-                        7
-                    ],
-                    [
-                        7,
-                        7,
-                        7
-                    ],
-                    [
-                        0,
-                        7,
-                        7
-                    ]
-                ]
+i_g = [[1,2],[3,4]]
 
-th = tophalf(i_g)
-print(th)
+print(expand(i_g, 5))

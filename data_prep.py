@@ -45,7 +45,7 @@ def process_folder(folder, output_file, lock):
             save_merged_jsonl(merged_data, output_file, lock)
 
 def main():
-    input_base_dir = Path('NewDataset')
+    input_base_dir = Path('NewDataset2')
     output_file = Path('train_data.jsonl')
     
     reset_output_file(output_file)

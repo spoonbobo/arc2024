@@ -105,16 +105,12 @@ if __name__ == '__main__':
         #         results = list(tqdm(pool.imap(evaluate_task, [(key, task, train_solutions, experiment_path) for key, task in train_challenges.items()]), total=total_tasks, desc="Evaluating tasks"))
         #     else:
         #         results = list(tqdm(pool.imap(evaluate_task, [(key, task, train_solutions, experiment_path) for key, task in test_challenges.items()]), total=total_tasks, desc="Evaluating tasks"))
-        
-        ct = 0
+
+
         for key, task in tqdm(train_challenges.items(), total=total_tasks, desc="Evaluating tasks"):
             result = evaluate_task((key, task, train_solutions, experiment_path))
             results.append(result)
             
-            if ct > 3:
-                break
-            ct += 1
-        
     
         # correct_guess = sum(results)
         print(f'\nMade correct guesses for {correct_guess} out of {total_tasks} tasks')
