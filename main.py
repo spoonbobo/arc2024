@@ -16,7 +16,7 @@ from llm import ARCAgent
 # for development, enable solver with trace to see primitives and visualize results
 
 base_path = 'arc-prize-2024/'
-max_depth = 1
+max_depth = 2
 use_beam = True
 beam_width = 3
 
@@ -55,7 +55,7 @@ def evaluate_task(args):
                 solutions.append(idsl.solve(train_inp, train_out, key, grid_id, bootstrap=True))
                 # exit()
             else:
-                solutions.append(idsl.solve(test_input, test_output, key, grid_id))
+                solutions.append(idsl.solve(train_inp, train_out, key, grid_id))
     
         # # Determine result folder based on success or failure
         result_folder = "success" if solutions else "failed"
@@ -110,6 +110,8 @@ if __name__ == '__main__':
         for key, task in tqdm(train_challenges.items(), total=total_tasks, desc="Evaluating tasks"):
             result = evaluate_task((key, task, train_solutions, experiment_path))
             results.append(result)
+            print(key)
+            exit()
             
     
         # correct_guess = sum(results)
