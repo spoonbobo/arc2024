@@ -8,11 +8,13 @@ import types
 import ast
 import os
 import json
-import uuid
 
 import prims
 import arc_types
 from arc_types import *
+
+# using simples will exponentially increase search space
+USE_SYMBOLS = True
 
 class InstructedDSL:
     """
@@ -72,11 +74,6 @@ class InstructedDSL:
                         except Exception as e:
                             print(f"Failed to parse function {func_name}: {e} ({prim})")
 
-    def generate_chains(self, input_pools: Dict[str, Set[Any]]):
-        keys = input_pools.keys()
-        for values in product(*input_pools.values()):
-            yield {key: value for key, value in zip(keys, values)}
-
     def make_hashable(self, obj):
         if isinstance(obj, list):
             return tuple(self.make_hashable(e) for e in obj)
@@ -119,9 +116,10 @@ class InstructedDSL:
         target = self.make_hashable(target)
 
         # Initialize static params
-        # for symbol in range(10):
-        #     chaining_pool[Integer].add(symbol)
-        #     trace_pool[Integer].append([(f'symbol_{symbol}', {'void': {'from': None}})])
+        if USE_SYMBOLS:
+            for symbol in range(10):
+                chaining_pool[Integer].add(symbol)
+                trace_pool[Integer].append([(f'symbol_{symbol}', {'void': {'from': None}})])
         
         chaining_pool[Grid].add(grid)
         trace_pool[Grid].append([('grid', {'grid': {'from': None}})])

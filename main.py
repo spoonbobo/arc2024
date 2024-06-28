@@ -111,6 +111,7 @@ if __name__ == '__main__':
             result = evaluate_task((key, task, train_solutions, experiment_path))
             results.append(result)
             print(key)
+            exit()
     
         # correct_guess = sum(results)
         print(f'\nMade correct guesses for {correct_guess} out of {total_tasks} tasks')

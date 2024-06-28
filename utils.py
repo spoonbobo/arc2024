@@ -11,6 +11,14 @@ _cmap = colors.ListedColormap([
 ])
 _norm = colors.Normalize(vmin=0, vmax=9)
 
+def plot_single_grid(grid):
+    """
+    Plots a single grid using the predefined color map and normalization.
+    """
+    fig, ax = plt.subplots()
+    plot_one(ax, grid, "Single Grid")
+    plt.show()
+
 def plot_one(ax, grid, title):
     """
     Helper function to plot a single grid.

@@ -160,7 +160,7 @@ def grid_sum(grid: Tuple[Tuple[int]]) -> int:
     """Calculates the sum of all values in the grid."""
     return sum(cell for row in grid for cell in row)
 
-def grid_median(grid: Tuple[Tuple[int]]) -> float:
+def grid_median(grid: Tuple[Tuple[int]]) -> int:
     """Calculates the median value of the grid."""
     flat_grid = sorted(cell for row in grid for cell in row)
     n = len(flat_grid)
@@ -168,7 +168,7 @@ def grid_median(grid: Tuple[Tuple[int]]) -> float:
     if n % 2 == 0:
         return int((flat_grid[mid - 1] + flat_grid[mid]) / 2)
     else:
-        return flat_grid[mid]
+        return int(flat_grid[mid])
 
 def grid_unique_values(grid: Tuple[Tuple[int]]) -> int:
     """Counts the number of unique values in the grid."""
