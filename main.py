@@ -16,7 +16,7 @@ from llm import ARCAgent
 # for development, enable solver with trace to see primitives and visualize results
 
 base_path = 'arc-prize-2024/'
-max_depth = 3
+max_depth = 2
 use_beam = False
 beam_width = 3
 

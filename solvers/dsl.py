@@ -154,7 +154,8 @@ class InstructedDSL:
                         if isinstance(result, tuple) and all(isinstance(row, tuple) for row in result):
                             # Ensure grid dimensions are within 1x1 to 30x30
                             if 1 <= len(result) <= 30 and 1 <= len(result[0]) <= 30:
-                                data.append({'result': make_serializable(result), 'trace': trace})
+                                if all(0 <= cell <= 9 for row in result for cell in row):
+                                    data.append({'result': make_serializable(result), 'trace': trace})
                     current_trace = self.build_trace(candidate_chain, details, input_pools, input_traces)
                     new_traces[details['return_type']].append((result, current_trace))
 

@@ -59,41 +59,21 @@ def paint_regions(grid: Tuple[Tuple[int]], regions: Tuple[FrozenSet[Tuple[int, i
 
     for region in regions:
         for r, c in region:
-            new_grid[r][c] = symbol % 10
+            new_grid[r][c] = symbol
     
     return tuple(tuple(row) for row in new_grid)
 
-def detect_edges(grid: Tuple[Tuple[int]]) -> FrozenSet[Tuple[int, int]]:
+def detect_edges(grid: Tuple[Tuple[int]], background_value: int) -> FrozenSet[Tuple[int, int]]:
     """Detects boundary edges of regions in the grid and returns them as a frozen set of coordinates."""
     rows, cols = len(grid), len(grid[0])
     edges = set()
-
-    # Determine the background value as the most frequent value in the grid
-    flat_grid = [cell for row in grid for cell in row]
-    background_value = max(set(flat_grid), key=flat_grid.count)
-
+    
     for r in range(rows):
         for c in range(cols):
             if grid[r][c] != background_value:
                 for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
                     nr, nc = r + dr, c + dc
                     if not (0 <= nr < rows and 0 <= nc < cols) or grid[nr][nc] == background_value:
-                        edges.add((r, c))
-                        break
-    
-    return frozenset(edges)
-
-def detect_edges(grid: Tuple[Tuple[int]]) -> FrozenSet[Tuple[int, int]]:
-    """Detects boundary edges of regions in the grid and returns them as a frozen set of coordinates."""
-    rows, cols = len(grid), len(grid[0])
-    edges = set()
-
-    for r in range(rows):
-        for c in range(cols):
-            if grid[r][c] != 0:  # Assuming 0 is the background value
-                for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-                    nr, nc = r + dr, c + dc
-                    if not (0 <= nr < rows and 0 <= nc < cols) or grid[nr][nc] != grid[r][c]:
                         edges.add((r, c))
                         break
     
@@ -116,7 +96,7 @@ def paint_edges(grid: Tuple[Tuple[int]], edges: FrozenSet[Tuple[int, int]], symb
     new_grid = [list(row) for row in grid]
 
     for r, c in edges:
-        new_grid[r][c] = symbol % 10
+        new_grid[r][c] = symbol
     
     return tuple(tuple(row) for row in new_grid)
 
@@ -125,7 +105,7 @@ def paint_surrounded_cells(grid: Tuple[Tuple[int]], surrounded_cells: FrozenSet[
     new_grid = [list(row) for row in grid]
 
     for r, c in surrounded_cells:
-        new_grid[r][c] = symbol % 10
+        new_grid[r][c] = symbol
     
     return tuple(tuple(row) for row in new_grid)
 
@@ -145,7 +125,7 @@ def form_grid_from_region(region: FrozenSet[Tuple[int, int]], symbol: int) -> Tu
     new_grid = [[0 for _ in range(width)] for _ in range(height)]
 
     for r, c in region:
-        new_grid[r - min_r][c - min_c] = symbol % 10
+        new_grid[r - min_r][c - min_c] = symbol
     
     return tuple(tuple(row) for row in new_grid)
 
@@ -204,106 +184,77 @@ def grid_non_zero_count(grid: Tuple[Tuple[int]]) -> int:
     """Counts the number of non-zero elements in the grid."""
     return sum(1 for row in grid for cell in row if cell != 0)
 
-# def test_primitives():
-#     grids = [
-#         (
-#             (1, 1, 1),
-#             (1, 0, 1),
-#             (1, 1, 1)
-#         ),
-#         (
-#             (1, 1, 0, 0),
-#             (1, 0, 0, 1),
-#             (0, 0, 1, 1),
-#             (0, 1, 1, 1)
-#         ),
-#         (
-#             (1, 1, 1),
-#             (1, 1, 1),
-#             (1, 1, 1)
-#         )
+
+# def test_detect_edges():
+#     test_cases = [
+#         {
+#             "grid": (
+#                 (1, 1, 0, 0),
+#                 (1, 0, 0, 1),
+#                 (0, 0, 1, 1),
+#                 (0, 1, 1, 1)
+#             ),
+#             "background_value": 0,
+#             "expected_edges": frozenset({
+#                 (0, 0), (0, 1), (0, 3), (1, 0), (1, 3), (2, 2), (2, 3), (3, 1), (3, 2), (3, 3)
+#             })
+#         },
+#         {
+#             "grid": (
+#                 (2, 2, 2, 2),
+#                 (2, 0, 0, 2),
+#                 (2, 0, 0, 2),
+#                 (2, 2, 2, 2)
+#             ),
+#             "background_value": 0,
+#             "expected_edges": frozenset({
+#                 (0, 0), (0, 1), (0, 2), (0, 3), (1, 0), (1, 3), (2, 0), (2, 3), (3, 0), (3, 1), (3, 2), (3, 3)
+#             })
+#         },
+#         {
+#             "grid": (
+#                 (3, 3, 3, 3),
+#                 (3, 1, 1, 3),
+#                 (3, 1, 1, 3),
+#                 (3, 3, 3, 3)
+#             ),
+#             "background_value": 3,
+#             "expected_edges": frozenset({
+#                 (1, 1), (1, 2), (2, 1), (2, 2)
+#             })
+#         },
+#         {
+#             "grid": (
+#                 (0, 0, 0, 0),
+#                 (0, 4, 4, 0),
+#                 (0, 4, 4, 0),
+#                 (0, 0, 0, 0)
+#             ),
+#             "background_value": 0,
+#             "expected_edges": frozenset({
+#                 (1, 1), (1, 2), (2, 1), (2, 2)
+#             })
+#         },
+#         {
+#             "grid": (
+#                 (5, 5, 5, 5),
+#                 (5, 5, 5, 5),
+#                 (5, 5, 5, 5),
+#                 (5, 5, 5, 5)
+#             ),
+#             "background_value": 5,
+#             "expected_edges": frozenset()
+#         }
 #     ]
 
-#     for i, grid in enumerate(grids):
-#         print(f"Testing grid {i+1}:")
-#         edges = detect_edges(grid)
-#         print(f"Edges: {edges}")
+#     for i, case in enumerate(test_cases):
+#         grid = case["grid"]
+#         background_value = case["background_value"]
+#         expected_edges = case["expected_edges"]
 
-#         surrounded_cells = cells_surrounded_by_edges(grid, edges)
-#         print(f"Surrounded Cells: {surrounded_cells}")
+#         result = detect_edges(grid, background_value)
+#         print(f"Test case {i + 1}: Detected edges: {result}")
+#         print(set(result) == set(expected_edges))
 
-#         painted_edges = paint_edges(grid, edges, 9)
-#         print(f"Painted Edges:\n{painted_edges}")
-
-#         painted_surrounded_cells = paint_surrounded_cells(grid, surrounded_cells, 9)
-#         print(f"Painted Surrounded Cells:\n{painted_surrounded_cells}")
-
-#         if surrounded_cells:
-#             new_grid = form_grid_from_region(surrounded_cells, 9)
-#             print(f"Formed Grid from Region:\n{new_grid}")
-#         print()
-
-# test_primitives()
-# symbol = 9
-# new_grid = form_grid_from_region(region, symbol)
-# print(new_grid)
-
-# def test_paint_regions():
-#     grid = (
-#         (1, 1, 0, 0),
-#         (1, 0, 0, 1),
-#         (0, 0, 1, 1),
-#         (0, 1, 1, 1)
-#     )
-#     regions = (
-#         frozenset({(0, 0), (0, 1), (1, 0)}),
-#         frozenset({(1, 3), (2, 2), (2, 3), (3, 1), (3, 2), (3, 3)})
-#     )
-#     symbol = 9
-
-#     painted_grid = paint_regions(grid, regions, symbol)
-#     for row in painted_grid:
-#         print(row)
-
-# test_paint_regions()
-
-# def test_flood_fill():
-#     grid = (
-#         (1, 1, 0, 0),
-#         (1, 0, 0, 1),
-#         (0, 0, 1, 1),
-#         (0, 1, 1, 1)
-#     )
-#     start = (1, 3)
-#     expected_output = frozenset({(0, 0), (0, 1), (1, 0)})
-    
-#     result = flood_fill(grid, start)
-#     print(result)
-#     assert result == expected_output, f"Expected {expected_output}, but got {result}"
-#     print("Test passed!")
-
-# test_flood_fill()
-
-# def test_flood_fill_all():
-#     grid = (
-#         (1, 1, 0, 0),
-#         (1, 0, 0, 1),
-#         (0, 0, 1, 1),
-#         (0, 1, 1, 1)
-#     )
-#     expected_output = (
-#         frozenset({(0, 0), (0, 1), (1, 0)}),
-#         frozenset({(0, 2), (0, 3), (1, 1), (1, 2)}),
-#         frozenset({(1, 3), (2, 2), (2, 3), (3, 1), (3, 2), (3, 3)}),
-#         frozenset({(2, 0), (2, 1), (3, 0)})
-#     )
-    
-#     result = flood_fill_all(grid)
-#     print(result)
-#     # assert result == expected_output, f"Expected {expected_output}, but got {result}"
-#     # print("Test passed!")
-
-# test_flood_fill_all()
-
-
-
+# # Run the tests
+# test_detect_edges()
