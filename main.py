@@ -16,8 +16,8 @@ from llm import ARCAgent
 # for development, enable solver with trace to see primitives and visualize results
 
 base_path = 'arc-prize-2024/'
-max_depth = 2
-use_beam = True
+max_depth = 3
+use_beam = False
 beam_width = 3
 
 SUBMISSION = False
@@ -111,8 +111,6 @@ if __name__ == '__main__':
             result = evaluate_task((key, task, train_solutions, experiment_path))
             results.append(result)
             print(key)
-            exit()
-            
     
         # correct_guess = sum(results)
         print(f'\nMade correct guesses for {correct_guess} out of {total_tasks} tasks')

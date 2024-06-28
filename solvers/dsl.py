@@ -119,9 +119,9 @@ class InstructedDSL:
         target = self.make_hashable(target)
 
         # Initialize static params
-        for symbol in range(10):
-            chaining_pool[Integer].add(symbol)
-            trace_pool[Integer].append([(f'symbol_{symbol}', {'void': {'from': None}})])
+        # for symbol in range(10):
+        #     chaining_pool[Integer].add(symbol)
+        #     trace_pool[Integer].append([(f'symbol_{symbol}', {'void': {'from': None}})])
         
         chaining_pool[Grid].add(grid)
         trace_pool[Grid].append([('grid', {'grid': {'from': None}})])
@@ -133,15 +133,15 @@ class InstructedDSL:
                 input_pools = {param_name: chaining_pool[param_type] for param_name, param_type in details['input_types'].items()}
                 input_traces = {param_name: trace_pool[param_type] for param_name, param_type in details['input_types'].items()}
                 candidate_chains = self.generate_chains(input_pools)
-                
                 if self.use_beam:
                     candidate_chains = sorted(candidate_chains, key=lambda x: self.h(x, target))[:self.beam_width]
 
                 for candidate_chain in candidate_chains:
                     try:
                         result = self.memoized_func(details['func'], **candidate_chain)
-                    except:
+                    except Exception as e:
                         # print(primitive, 'returns', None)
+                        # print(e)
                         continue
                     if result is None:
                         continue
