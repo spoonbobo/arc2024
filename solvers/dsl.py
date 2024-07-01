@@ -14,7 +14,15 @@ import arc_types
 from arc_types import *
 
 # using simples will exponentially increase search space
-USE_SYMBOLS = True
+USE_SYMBOLS = False
+ADD_COORDS = True
+LIMIT_GRID_SIZE = True
+MAX_GRID_SIZE = 10
+RANDOMIZE_STATIC = True
+if RANDOMIZE_STATIC:
+    import random
+    from random import randint
+    random.seed(42)
 
 class InstructedDSL:
     """
@@ -114,12 +122,33 @@ class InstructedDSL:
             data = []
         grid = self.make_hashable(grid)
         target = self.make_hashable(target)
+        
+        # MUST not limit grid size in competition time
+        if bootstrap and LIMIT_GRID_SIZE:
+            # bootstrapping on large grid is endless process
+            if len(grid) * len(grid[0]) > MAX_GRID_SIZE:
+                return solutions
 
         # Initialize static params
         if USE_SYMBOLS:
             for symbol in range(10):
+                if RANDOMIZE_STATIC and randint(0, 1):
+                    continue
                 chaining_pool[Integer].add(symbol)
                 trace_pool[Integer].append([(f'symbol_{symbol}', {'void': {'from': None}})])
+        
+        # for symbol in range(1,2):
+        symbol = grid_id
+        chaining_pool[Integer].add(symbol)
+        trace_pool[Integer].append([(f'symbol_{symbol}', {'void': {'from': None}})])
+        
+        if ADD_COORDS:
+            for r in range(len(grid)):
+                for c in range(len(grid[0])):
+                    if RANDOMIZE_STATIC and randint(0, 1):
+                        continue
+                    chaining_pool[Tuple[int, int]].add((r, c))
+                    trace_pool[Tuple[int, int]].append([(f'coord_{r}_{c}', {'void': {'from': None}})])
         
         chaining_pool[Grid].add(grid)
         trace_pool[Grid].append([('grid', {'grid': {'from': None}})])

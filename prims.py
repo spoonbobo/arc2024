@@ -1,10 +1,14 @@
 from typing import Tuple, FrozenSet
+import math
+
+def make_coordinate(x: int, y: int) -> Tuple[int, int]:
+    """Make a grid coordinate with x and y"""
+    return (x, y)
 
 def flood_fill(grid: Tuple[Tuple[int]], start: Tuple[int, int]) -> FrozenSet[Tuple[int, int]]:
     """Performs flood fill from a starting cell and returns the connected region as a frozen set."""
     sr, sc = start
     rows, cols = len(grid), len(grid[0])
-    original_value = grid[sr][sc]
     stack = [(sr, sc)]
     connected_cells = set()
     visited = set()
@@ -13,101 +17,14 @@ def flood_fill(grid: Tuple[Tuple[int]], start: Tuple[int, int]) -> FrozenSet[Tup
         r, c = stack.pop()
         if (r, c) not in visited:
             visited.add((r, c))
-            connected_cells.add((r, c))
-            for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-                nr, nc = r + dr, c + dc
-                if 0 <= nr < rows and 0 <= nc < cols and grid[nr][nc] == original_value and (nr, nc) not in visited:
-                    stack.append((nr, nc))
-    
-    return frozenset(connected_cells)
-
-def flood_fill_all(grid: Tuple[Tuple[int]]) -> Tuple[FrozenSet[Tuple[int, int]], ...]:
-    """Finds all connected regions in the grid and returns them as a tuple of frozen sets."""
-    rows, cols = len(grid), len(grid[0])
-    visited = set()
-    regions = []
-
-    for r in range(rows):
-        for c in range(cols):
-            if (r, c) not in visited:
-                region = flood_fill(grid, (r, c))
-                if region:
-                    regions.append(region)
-                    visited.update(region)
-    
-    return tuple(regions)
-
-def count_connected_components(grid: Tuple[Tuple[int]]) -> int:
-    """Counts the number of distinct connected components in the grid."""
-    rows, cols = len(grid), len(grid[0])
-    visited = set()
-    component_count = 0
-
-    for r in range(rows):
-        for c in range(cols):
-            if (r, c) not in visited and grid[r][c] != 0:
-                region = flood_fill(grid, (r, c))
-                visited.update(region)
-                component_count += 1
-
-    return component_count
-
-def paint_regions(grid: Tuple[Tuple[int]], regions: Tuple[FrozenSet[Tuple[int, int]], ...], symbol: int) -> Tuple[Tuple[int]]:
-    """Paints each region with the provided integer symbol and returns the new grid."""
-    rows, cols = len(grid), len(grid[0])
-    new_grid = [[0 for _ in range(cols)] for _ in range(rows)]
-
-    for region in regions:
-        for r, c in region:
-            new_grid[r][c] = symbol
-    
-    return tuple(tuple(row) for row in new_grid)
-
-def detect_edges(grid: Tuple[Tuple[int]], background_value: int) -> FrozenSet[Tuple[int, int]]:
-    """Detects boundary edges of regions in the grid and returns them as a frozen set of coordinates."""
-    rows, cols = len(grid), len(grid[0])
-    edges = set()
-    
-    for r in range(rows):
-        for c in range(cols):
-            if grid[r][c] != background_value:
+            if grid[r][c] != 0:  # Consider all non-zero cells as part of the region
+                connected_cells.add((r, c))
                 for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
                     nr, nc = r + dr, c + dc
-                    if not (0 <= nr < rows and 0 <= nc < cols) or grid[nr][nc] == background_value:
-                        edges.add((r, c))
-                        break
+                    if 0 <= nr < rows and 0 <= nc < cols and (nr, nc) not in visited:
+                        stack.append((nr, nc))
     
-    return frozenset(edges)
-
-def cells_surrounded_by_edges(grid: Tuple[Tuple[int]], edges: FrozenSet[Tuple[int, int]]) -> FrozenSet[Tuple[int, int]]:
-    """Finds cells that are completely surrounded by edges."""
-    rows, cols = len(grid), len(grid[0])
-    surrounded_cells = set()
-
-    for r in range(1, rows - 1):
-        for c in range(1, cols - 1):
-            if all((r + dr, c + dc) in edges for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]):
-                surrounded_cells.add((r, c))
-    
-    return frozenset(surrounded_cells)
-
-def paint_edges(grid: Tuple[Tuple[int]], edges: FrozenSet[Tuple[int, int]], symbol: int) -> Tuple[Tuple[int]]:
-    """Paints the edges with the provided integer symbol and returns the new grid."""
-    new_grid = [list(row) for row in grid]
-
-    for r, c in edges:
-        new_grid[r][c] = symbol
-    
-    return tuple(tuple(row) for row in new_grid)
-
-def paint_surrounded_cells(grid: Tuple[Tuple[int]], surrounded_cells: FrozenSet[Tuple[int, int]], symbol: int) -> Tuple[Tuple[int]]:
-    """Paints the cells surrounded by edges with the provided integer symbol and returns the new grid."""
-    new_grid = [list(row) for row in grid]
-
-    for r, c in surrounded_cells:
-        new_grid[r][c] = symbol
-    
-    return tuple(tuple(row) for row in new_grid)
+    return frozenset(connected_cells)
 
 def form_grid_from_region(region: FrozenSet[Tuple[int, int]], symbol: int) -> Tuple[Tuple[int]]:
     """Forms a new grid that includes the region, marked with the symbol, and fills the rest with 0."""
@@ -129,132 +46,255 @@ def form_grid_from_region(region: FrozenSet[Tuple[int, int]], symbol: int) -> Tu
     
     return tuple(tuple(row) for row in new_grid)
 
-def grid_mean(grid: Tuple[Tuple[int]]) -> int:
-    """Calculates the mean value of the grid and returns the floor of the mean."""
-    flat_grid = [cell for row in grid for cell in row]
-    return int(sum(flat_grid) / len(flat_grid))
+def paint_region_with_mean(grid: Tuple[Tuple[int]], region: FrozenSet[Tuple[int, int]]) -> Tuple[Tuple[int]]:
+    """Paints the region with the mean value of the region."""
+    values = [grid[r][c] for r, c in region]
+    mean_value = sum(values) // len(values)
+    new_grid = [list(row) for row in grid]
+    for r, c in region:
+        new_grid[r][c] = mean_value
+    return tuple(tuple(row) for row in new_grid)
 
-def grid_mode(grid: Tuple[Tuple[int]]) -> int:
-    """Calculates the mode value of the grid without using the statistics library."""
-    flat_grid = [cell for row in grid for cell in row]
+def paint_region_with_mode(grid: Tuple[Tuple[int]], region: FrozenSet[Tuple[int, int]]) -> Tuple[Tuple[int]]:
+    """Paints the region with the mode value of the region."""
+    values = [grid[r][c] for r, c in region]
     frequency = {}
-    for value in flat_grid:
+    for value in values:
         if value in frequency:
             frequency[value] += 1
         else:
             frequency[value] = 1
     mode_value = max(frequency, key=frequency.get)
-    return mode_value
+    new_grid = [list(row) for row in grid]
+    for r, c in region:
+        new_grid[r][c] = mode_value
+    return tuple(tuple(row) for row in new_grid)
 
-def grid_max(grid: Tuple[Tuple[int]]) -> int:
-    """Finds the maximum value in the grid."""
-    flat_grid = [cell for row in grid for cell in row]
-    return max(flat_grid)
+def paint_region_with_max(grid: Tuple[Tuple[int]], region: FrozenSet[Tuple[int, int]]) -> Tuple[Tuple[int]]:
+    """Paints the region with the max value of the region."""
+    values = [grid[r][c] for r, c in region]
+    max_value = max(values)
+    new_grid = [list(row) for row in grid]
+    for r, c in region:
+        new_grid[r][c] = max_value
+    return tuple(tuple(row) for row in new_grid)
 
-def grid_min(grid: Tuple[Tuple[int]]) -> int:
-    """Finds the minimum value in the grid."""
-    flat_grid = [cell for row in grid for cell in row]
-    return min(flat_grid)
+def paint_region_with_min(grid: Tuple[Tuple[int]], region: FrozenSet[Tuple[int, int]]) -> Tuple[Tuple[int]]:
+    """Paints the region with the min value of the region."""
+    values = [grid[r][c] for r, c in region]
+    min_value = min(values)
+    new_grid = [list(row) for row in grid]
+    for r, c in region:
+        new_grid[r][c] = min_value
+    return tuple(tuple(row) for row in new_grid)
 
-def grid_sum(grid: Tuple[Tuple[int]]) -> int:
-    """Calculates the sum of all values in the grid."""
-    return sum(cell for row in grid for cell in row)
-
-def grid_median(grid: Tuple[Tuple[int]]) -> int:
-    """Calculates the median value of the grid."""
-    flat_grid = sorted(cell for row in grid for cell in row)
-    n = len(flat_grid)
+def paint_region_with_median(grid: Tuple[Tuple[int]], region: FrozenSet[Tuple[int, int]]) -> Tuple[Tuple[int]]:
+    """Paints the region with the median value of the region."""
+    values = sorted([grid[r][c] for r, c in region])
+    n = len(values)
     mid = n // 2
     if n % 2 == 0:
-        return int((flat_grid[mid - 1] + flat_grid[mid]) / 2)
+        median_value = (values[mid - 1] + values[mid]) // 2
     else:
-        return int(flat_grid[mid])
+        median_value = values[mid]
+    new_grid = [list(row) for row in grid]
+    for r, c in region:
+        new_grid[r][c] = median_value
+    return tuple(tuple(row) for row in new_grid)
 
-def grid_unique_values(grid: Tuple[Tuple[int]]) -> int:
-    """Counts the number of unique values in the grid."""
-    flat_grid = [cell for row in grid for cell in row]
-    return len(set(flat_grid))
+def rotate_region_90(region: FrozenSet[Tuple[int, int]], center: Tuple[int, int]) -> FrozenSet[Tuple[int, int]]:
+    """Rotates the region by 90 degrees clockwise around a center point."""
+    cx, cy = center
+    return frozenset((cy - y + cx, x - cx + cy) for x, y in region)
 
-def grid_range(grid: Tuple[Tuple[int]]) -> int:
-    """Calculates the range of the grid (max value - min value)."""
-    flat_grid = [cell for row in grid for cell in row]
-    return max(flat_grid) - min(flat_grid)
+def rotate_region_180(region: FrozenSet[Tuple[int, int]], center: Tuple[int, int]) -> FrozenSet[Tuple[int, int]]:
+    """Rotates the region by 180 degrees around a center point."""
+    cx, cy = center
+    return frozenset((2 * cx - x, 2 * cy - y) for x, y in region)
 
-def grid_non_zero_count(grid: Tuple[Tuple[int]]) -> int:
-    """Counts the number of non-zero elements in the grid."""
-    return sum(1 for row in grid for cell in row if cell != 0)
+def rotate_region_270(region: FrozenSet[Tuple[int, int]], center: Tuple[int, int]) -> FrozenSet[Tuple[int, int]]:
+    """Rotates the region by 270 degrees clockwise around a center point."""
+    cx, cy = center
+    return frozenset((cy + y - cx, cx - x + cy) for x, y in region)
+
+def reflect_region_horizontal(region: FrozenSet[Tuple[int, int]]) -> FrozenSet[Tuple[int, int]]:
+    """Reflects the region horizontally (over the y-axis)."""
+    return frozenset((-x, y) for x, y in region)
+
+def reflect_region_vertical(region: FrozenSet[Tuple[int, int]]) -> FrozenSet[Tuple[int, int]]:
+    """Reflects the region vertically (over the x-axis)."""
+    return frozenset((x, -y) for x, y in region)
+
+def reflect_region_diagonal(region: FrozenSet[Tuple[int, int]]) -> FrozenSet[Tuple[int, int]]:
+    """Reflects the region along the main diagonal (y = x)."""
+    return frozenset((y, x) for x, y in region)
+
+def apply_region_to_grid(grid: Tuple[Tuple[int]], region: FrozenSet[Tuple[int, int]], symbol: int) -> Tuple[Tuple[int]]:
+    """Applies the region to the grid with the given symbol."""
+    new_grid = [list(row) for row in grid]
+    for r, c in region:
+        if 0 <= r < len(grid) and 0 <= c < len(grid[0]):  # Ensure within bounds
+            new_grid[r][c] = symbol
+    return tuple(tuple(row) for row in new_grid)
+
+# def move(region: FrozenSet[Tuple[int, int]], dx: int, dy: int) -> FrozenSet[Tuple[int, int]]:
+#     """Moves a region by a given factor (dx, dy)."""
+#     return frozenset((r + dx, c + dy) for r, c in region)
+
+def move_by_one(region: FrozenSet[Tuple[int, int]]) -> FrozenSet[Tuple[int, int]]:
+    """Moves a region by one unit in both x and y directions."""
+    def move(region: FrozenSet[Tuple[int, int]], dx: int, dy: int) -> FrozenSet[Tuple[int, int]]:
+        return frozenset((r + dx, c + dy) for r, c in region)
+    
+    return move(region, 1, 1)
+
+def move_by_two(region: FrozenSet[Tuple[int, int]]) -> FrozenSet[Tuple[int, int]]:
+    """Moves a region by two units in both x and y directions."""
+    def move(region: FrozenSet[Tuple[int, int]], dx: int, dy: int) -> FrozenSet[Tuple[int, int]]:
+        return frozenset((r + dx, c + dy) for r, c in region)
+    
+    return move(region, 2, 2)
+
+def grid_to_region(grid: Tuple[Tuple[int]]) -> FrozenSet[Tuple[int, int]]:
+    """Converts a grid to a region by identifying all cells."""
+    region = set()
+    for r, row in enumerate(grid):
+        for c, _ in enumerate(row):
+            region.add((r, c))
+    return frozenset(region)
+
+def union_regions(region1: FrozenSet[Tuple[int, int]], region2: FrozenSet[Tuple[int, int]]) -> FrozenSet[Tuple[int, int]]:
+    """Returns the union of two regions."""
+    return region1 | region2
+
+def intersect_regions(region1: FrozenSet[Tuple[int, int]], region2: FrozenSet[Tuple[int, int]]) -> FrozenSet[Tuple[int, int]]:
+    """Returns the intersection of two regions."""
+    return region1 & region2
+
+def difference_regions(region1: FrozenSet[Tuple[int, int]], region2: FrozenSet[Tuple[int, int]]) -> FrozenSet[Tuple[int, int]]:
+    """Returns the difference of two regions (region1 - region2)."""
+    return region1 - region2
+
+def symmetric_difference_regions(region1: FrozenSet[Tuple[int, int]], region2: FrozenSet[Tuple[int, int]]) -> FrozenSet[Tuple[int, int]]:
+    """Returns the symmetric difference of two regions."""
+    return region1 ^ region2
+
+def bounding_box(region: FrozenSet[Tuple[int, int]]) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+    """Calculates the smallest rectangle that can contain the entire region."""
+    min_r = min(r for r, _ in region)
+    max_r = max(r for r, _ in region)
+    min_c = min(c for _, c in region)
+    max_c = max(c for _, c in region)
+    return (min_r, min_c), (max_r, max_c)
+
+# def region_perimeter(region: FrozenSet[Tuple[int, int]]) -> int:
+#     """Calculates the perimeter of the region."""
+#     perimeter = 0
+#     for r, c in region:
+#         for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+#             if (r + dr, c + dc) not in region:
+#                 perimeter += 1
+#     return perimeter
+
+# def region_area(region: FrozenSet[Tuple[int, int]]) -> int:
+#     """Calculates the area (number of cells) of the region."""
+#     return len(region)
+
+def scale_region(region: FrozenSet[Tuple[int, int]], scale: float, center: Tuple[int, int] = (0, 0)) -> FrozenSet[Tuple[int, int]]:
+    """Scales the region by a given factor relative to a center point."""
+    cx, cy = center
+    return frozenset((round(cx + (r - cx) * scale), round(cy + (c - cy) * scale)) for r, c in region)
+
+def rotate_region(region: FrozenSet[Tuple[int, int]], angle: float, center: Tuple[int, int]) -> FrozenSet[Tuple[int, int]]:
+    """Rotates the region by an arbitrary angle (in degrees) around a center point."""
+    angle_rad = math.radians(angle)
+    cx, cy = center
+    return frozenset((
+        round(cx + (r - cx) * math.cos(angle_rad) - (c - cy) * math.sin(angle_rad)),
+        round(cy + (r - cx) * math.sin(angle_rad) + (c - cy) * math.cos(angle_rad))
+    ) for r, c in region)
 
 
-# def test_detect_edges():
-#     test_cases = [
-#         {
-#             "grid": (
-#                 (1, 1, 0, 0),
-#                 (1, 0, 0, 1),
-#                 (0, 0, 1, 1),
-#                 (0, 1, 1, 1)
-#             ),
-#             "background_value": 0,
-#             "expected_edges": frozenset({
-#                 (0, 0), (0, 1), (0, 3), (1, 0), (1, 3), (2, 2), (2, 3), (3, 1), (3, 2), (3, 3)
-#             })
-#         },
-#         {
-#             "grid": (
-#                 (2, 2, 2, 2),
-#                 (2, 0, 0, 2),
-#                 (2, 0, 0, 2),
-#                 (2, 2, 2, 2)
-#             ),
-#             "background_value": 0,
-#             "expected_edges": frozenset({
-#                 (0, 0), (0, 1), (0, 2), (0, 3), (1, 0), (1, 3), (2, 0), (2, 3), (3, 0), (3, 1), (3, 2), (3, 3)
-#             })
-#         },
-#         {
-#             "grid": (
-#                 (3, 3, 3, 3),
-#                 (3, 1, 1, 3),
-#                 (3, 1, 1, 3),
-#                 (3, 3, 3, 3)
-#             ),
-#             "background_value": 3,
-#             "expected_edges": frozenset({
-#                 (1, 1), (1, 2), (2, 1), (2, 2)
-#             })
-#         },
-#         {
-#             "grid": (
-#                 (0, 0, 0, 0),
-#                 (0, 4, 4, 0),
-#                 (0, 4, 4, 0),
-#                 (0, 0, 0, 0)
-#             ),
-#             "background_value": 0,
-#             "expected_edges": frozenset({
-#                 (1, 1), (1, 2), (2, 1), (2, 2)
-#             })
-#         },
-#         {
-#             "grid": (
-#                 (5, 5, 5, 5),
-#                 (5, 5, 5, 5),
-#                 (5, 5, 5, 5),
-#                 (5, 5, 5, 5)
-#             ),
-#             "background_value": 5,
-#             "expected_edges": frozenset()
-#         }
-#     ]
+def convex_hull(region: FrozenSet[Tuple[int, int]]) -> FrozenSet[Tuple[int, int]]:
+    """Calculates the convex hull of the region using the Graham scan algorithm."""
+    points = sorted(region)
+    if len(points) <= 1:
+        return region
 
-#     for i, case in enumerate(test_cases):
-#         grid = case["grid"]
-#         background_value = case["background_value"]
-#         expected_edges = case["expected_edges"]
+    def cross(o, a, b):
+        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
 
-#         result = detect_edges(grid, background_value)
-#         print(f"Test case {i + 1}: Detected edges: {result}")
-#         print(set(result) == set(expected_edges))
+    lower = []
+    for p in points:
+        while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0:
+            lower.pop()
+        lower.append(p)
 
-# # Run the tests
-# test_detect_edges()
+    upper = []
+    for p in reversed(points):
+        while len(upper) >= 2 and cross(upper[-2], upper[-1], p) <= 0:
+            upper.pop()
+        upper.append(p)
+
+    return frozenset(lower[:-1] + upper[:-1])
+
+def contour_extraction(region: FrozenSet[Tuple[int, int]]) -> FrozenSet[Tuple[int, int]]:
+    """Extracts the contour (boundary) of the region."""
+    contour = set()
+    for r, c in region:
+        for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            if (r + dr, c + dc) not in region:
+                contour.add((r, c))
+                break
+    return frozenset(contour)
+
+def dilate_region(region: FrozenSet[Tuple[int, int]]) -> FrozenSet[Tuple[int, int]]:
+    """Expands the region by one cell in all directions."""
+    dilated = set(region)
+    for r, c in region:
+        for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            dilated.add((r + dr, c + dc))
+    return frozenset(dilated)
+
+def erode_region(region: FrozenSet[Tuple[int, int]]) -> FrozenSet[Tuple[int, int]]:
+    """Shrinks the region by one cell in all directions."""
+    eroded = set()
+    for r, c in region:
+        if all((r + dr, c + dc) in region for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]):
+            eroded.add((r, c))
+    return frozenset(eroded)
+
+def translate_region(region: FrozenSet[Tuple[int, int]], dx: int, dy: int) -> FrozenSet[Tuple[int, int]]:
+    """Translates the region by a specified amount in both x and y directions."""
+    return frozenset((r + dx, c + dy) for r, c in region)
+
+def fill_diagonal_with_zeros(grid: Tuple[Tuple[int]], start: Tuple[int, int], steps: int) -> Tuple[Tuple[int]]:
+    """Fills the diagonal starting from a point with zeros by steps."""
+    new_grid = [list(row) for row in grid]
+    r, c = start
+    for _ in range(steps):
+        if 0 <= r < len(grid) and 0 <= c < len(grid[0]):
+            new_grid[r][c] = 0
+        r += 1
+        c += 1
+    return tuple(tuple(row) for row in new_grid)
+
+def fill_row_with_zeros(grid: Tuple[Tuple[int]], start: Tuple[int, int], steps: int) -> Tuple[Tuple[int]]:
+    """Fills the row starting from a point with zeros by steps."""
+    new_grid = [list(row) for row in grid]
+    r, c = start
+    for _ in range(steps):
+        if 0 <= r < len(grid) and 0 <= c < len(grid[0]):
+            new_grid[r][c] = 0
+        c += 1
+    return tuple(tuple(row) for row in new_grid)
+
+def fill_column_with_zeros(grid: Tuple[Tuple[int]], start: Tuple[int, int], steps: int) -> Tuple[Tuple[int]]:
+    """Fills the column starting from a point with zeros by steps."""
+    new_grid = [list(row) for row in grid]
+    r, c = start
+    for _ in range(steps):
+        if 0 <= r < len(grid) and 0 <= c < len(grid[0]):
+            new_grid[r][c] = 0
+        r += 1
+    return tuple(tuple(row) for row in new_grid)
